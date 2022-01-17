@@ -7,7 +7,7 @@ def main():
     net = Network()   # Client connects to server
 
     player_id = net.receive()
-    print(f"You are player {player_id}")    # 0, 1 or 2
+    print(f"\nYou are player {player_id}")    # 0, 1 or 2
 
     selected_game_mode = False
     running = True
@@ -17,7 +17,7 @@ def main():
             game = net.receive()  # Receive game object
 
         except:
-            print("\nRan into an issue when receiving the game!")
+            print("\nRan into an issue when receiving the game")
             running = False
 
         else:
@@ -31,33 +31,32 @@ def main():
                     print("That is not a valid game mode, please type it in correctly")
 
                 else:
-                    if game_mode == 3:
-                        game.connected += 1
-                        selected_game_mode = True
+                    selected_game_mode = True
+                    net.send(game_mode)
 
-            if game.started:
-                player = game.player_list[player_id]    # Get your player object from the game
-                game.current_player = player
-#
-                if player.id == game.turn:   # If it's your turn
-                    game.display_info()
-                    game.choose_card(player)   # Player chooses card
-                    game.compare_card()
+            else:   # If they chose a game mode already
 
-                    if game.drew_card:
-                        game.choose_card(player)    # Checks if the card they picked up can be placed down
-                        game.drew_card = False
+                if game.started:
+                    #your_player = game.player_list[player_id]    # Get your player object from the game
+
+                    if player_id == game.turn:   # If it's your turn
+                        game.display_info()
+                        game.choose_card()   # Player chooses card
+
+                        if game.drew_card:
+                            game.choose_card()    # Checks if the card they picked up can be placed down
+                            game.drew_card = False
+
+                        game.player_went = True     # So server will compare cards and set it back to False
+
+                    else:   # If it's not your turn
+                        print("\nWaiting for the other player to finish their turn.\n")
+
+
                 else:
-                    print("\nWaiting for the other player to finish their turn.\n")
+                    print("\nWaiting for the game to start. \n")
 
-
-
-            net.send(game)    # Return game back to server so it can be sent back to the other clients
-
-
-
-
-
+                net.send(game)    # Return game back to server, so it can be sent back to the other clients
 
 main()
 
