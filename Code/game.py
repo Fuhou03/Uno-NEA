@@ -10,11 +10,12 @@ class Uno:
         self.started = False
         self.finished = False
         self.drew_card = False
+        self.player_went = False
 
         self.player_list = []    # Create the players
         self.discard_pile = []
         self.discard_pile_length = 0
-        self.current_player = None
+        self.current_player = None  # Gets assigned in display_info()
 
         self.dk = Deck()
 
@@ -100,15 +101,17 @@ class Uno:
 
 
     def display_info(self):
-        #print(f"\nCurrent player: {self.current_player.id}")
-        print(f"The current direction: {self.direction}\n")
+        self.current_player = self.player_list[self.turn]    # Changes every turn
+
+        print(f"\nThe current direction: {self.direction}")
 
         print(f"The card at the top of the Discard pile:"
-              f" \n{self.discard_pile[-1].colour} - {self.discard_pile[-1].value}")
+              f" {self.discard_pile[-1].colour} - {self.discard_pile[-1].value}\n")
 
-        print("Your deck is: \n")
+        print("Your deck is:")
+
         for i in range(0, len(self.current_player.deck)):
-            print(f"{i}: {self.current_player.deck[i].colour} - {self.current_player.deck[i].value}\n")
+            print(f"{i}: {self.current_player.deck[i].colour} - {self.current_player.deck[i].value}")
 
 
     def change_direction(self):
@@ -118,11 +121,10 @@ class Uno:
             self.direction = "clockwise"
 
 
-
     def next_turn(self):
         """ Increments or decrements the turn variable to determine whose turn is next """
         if self.direction == "clockwise":
-            self.turn = (self.turn + 1) % 3   # Becomes 0 if it reaches 3, becomes 1 if it's 4 etc to stop index errors
+            self.turn = (self.turn + 1) % 3   # Becomes 0 if it reaches 3, becomes 1 if it's 4 etc. to stop index errors
         else:
             self.turn -= 1
             if self.turn == -1:   # Prevents index errors
@@ -130,7 +132,7 @@ class Uno:
         return self.turn
 
 
-    def choose_card(self, player):
+    def choose_card(self):
         """ To choose your own card """
         #if player.id == 0 or player.id == 1:    # Player 0 or P1
         self.discard_pile_length = len(self.discard_pile)   # Used to check if a card was placed down (in compare_card)
@@ -138,13 +140,14 @@ class Uno:
         valid = False
         while not valid:
             try:  # They might enter a number that is higher/lower than the no. of cards u have (fix later)
-                choice = int(input("Choose a card by typing it's number at the front. \n"
+                choice = int(input("\nChoose a card by typing it's number at the front. \n"
                                    "If you have no valid cards then type any string to draw a card: "))
-                print("\n", end="")
-                if choice >= len(player.deck) or choice < 0:  # If they enter an invalid number
+                print("")
+                if choice >= len(self.current_player.deck) or choice < 0:  # If they enter an invalid number
                     raise IndexError
 
             except ValueError:  # If they entered something else
+                self.drew_card = True   # To call the function again after
                 break   # They will exit this function and draw a card
             except IndexError:
                 print("That card is not possible. Please enter the number correctly. \n")
@@ -152,19 +155,20 @@ class Uno:
 
             else:  # Executes after the try statement (If they entered a number)
                 # If my choice matches correctly
-                if (player.deck[choice].colour == self.discard_pile[-1].colour) or\
-                        (player.deck[choice].value == self.discard_pile[-1].value):
-                    self.discard_pile.append(player.deck[choice])  # Add the card to the discard pile
-                    player.deck.pop(choice)  # Remove it from your deck
+                if (self.current_player.deck[choice].colour == self.discard_pile[-1].colour) or\
+                        (self.current_player.deck[choice].value == self.discard_pile[-1].value):
+                    self.discard_pile.append(self.current_player.deck[choice])  # Add the card to the discard pile
+                    self.current_player.deck.pop(choice)  # Remove it from your deck
                     valid = True
 
-                elif player.deck[choice].value == "wild" or player.deck[choice].value == "wild 4":
+                elif self.current_player.deck[choice].value == "wild" or\
+                        self.current_player.deck[choice].value == "wild 4":
                     # If they chose a wild card
                     new_colour = input("Choose a colour for the next player: ")
-                    player.deck[choice].colour = new_colour  # The colour of the card at the top of the pile changes
+                    self.current_player.deck[choice].colour = new_colour  # The colour of the card at the top of the pile changes
 
-                    self.discard_pile.append(player.deck[choice])
-                    player.deck.pop(choice)
+                    self.discard_pile.append(self.current_player.deck[choice])
+                    self.current_player.deck.pop(choice)
                     valid = True
 
                 else:
@@ -208,11 +212,11 @@ class Uno:
 
         if len(self.discard_pile) == self.discard_pile_length:  # If they chose to draw a card (length didn't change)
             self.current_player.deck = self.dk.draw_card(self.current_player.deck)  # Draw 1 card from main deck
-            self.drew_card = True   # To call the function again after
 
             # If the card you drew is valid you can place it down immediately
-            if self.current_player.deck[-1].colour == self.discard_pile[-1].colour or self.current_player.deck[-1].value ==\
-                self.discard_pile[-1].value:
+            if self.current_player.deck[-1].colour == self.discard_pile[-1].colour or\
+                    self.current_player.deck[-1].value == self.discard_pile[-1].value:
+
                 #if self.current_player.id == 0 or self.current_player.id == 1:
                 ask = input(f"The {self.current_player.deck[-1].colour} - {self.current_player.deck[-1].value}"
                             f" card you picked up is valid, do you want to place it down? Type 'y' or 'n': ")
@@ -233,7 +237,7 @@ class Uno:
                 self.turn = self.next_turn()
                 #continue
 
-        if self.discard_pile[-1].value == "draw 2":
+        elif self.discard_pile[-1].value == "draw 2":
             # Next player draws 2 and their turn is skipped
             for i in range(2):
                 next_player.deck = self.dk.draw_card(next_player.deck)
