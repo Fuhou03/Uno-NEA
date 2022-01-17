@@ -28,39 +28,47 @@ print("Waiting for a connection\n")
 
 def client_thread(conn, player_num, game_id):
     global connected_players
-    conn.sendall(pickle.dumps(player_num))  # To let the player know which player they are
 
-    #    conn.sendall(pickle.dumps(game))  # Sends the game so the client can choose a game mode
-    #    game = pickle.loads(conn.recv(2048*3))      # To check if 3 players have connected
+    conn.sendall(pickle.dumps(player_num))  # To let the player know which player they are
+    conn.sendall(pickle.dumps(games[game_id]))      # Sends once so the while loop works in client
 
     while True:
-        game = games[game_id]
         try:
+            data = pickle.loads(conn.recv(2048*3))  # Receive game mode initially
+            if not data:    # If the client disconnects they don't send anything
+                break
+
             if game_id in games:     # If game still exists. Game deleted if client disconnects
+                game = games[game_id]
+                #conn.sendall(pickle.dumps(game))    # Send game to client
+                #game = pickle.loads(conn.recv(2048*3))
+
+                if data == 3:
+                    game.connected += 1     # So the server knows 1 player has chosen game mode 3
+
+                if game.connected == 3 and not game.started:     # If 3 players have connected
+                    game.play_game(3)       # This code will only happen once
+                    game.started = True     # So it doesn't start multiple games
+
+                elif game.finished == True:
+                    break
+
+                if game.player_went == True:
+                    game.compare_card()
+                    game.player_went = False    # Becomes True when the next player finishes their turn
+
                 conn.sendall(pickle.dumps(game))    # Send game to client
-                game = pickle.loads(conn.recv(2048*3))
 
             else:
                 raise Exception
 
         except socket.error as e:
             print(e)
+            break
 
         except: # If they disconnect or the game no longer exists
             print("The game no longer exists.")     # All players in that game will disconnect
             break
-
-        else:
-            if game.connected != 3:
-                print(f"Game connected: {game.connected}")
-
-            if game.connected == 3 and not game.started:     # If 3 players have connected
-                game.play_game(3)       # This code will only happen once
-                game.started = True     # So it doesn't start multiple games
-
-            elif game.finished == True:
-                break
-
 
     try:    # Game might have been deleted already
         del games[game_id]
