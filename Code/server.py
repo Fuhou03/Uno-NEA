@@ -2,6 +2,7 @@ import socket
 import threading
 import pickle
 from game import Uno
+from actions import Response
 
 ip = socket.gethostbyname(socket.gethostname())  # my IPv4 Address
 port = 5555
@@ -28,38 +29,58 @@ print("Waiting for a connection\n")
 
 def client_thread(conn, player_num, game_id):
     global connected_players
+    #global games
 
     conn.sendall(pickle.dumps(player_num))  # To let the player know which player they are
-    conn.sendall(pickle.dumps(games[game_id]))      # Sends once so the while loop works in client
+    response = Response(games[game_id], None)
+    conn.sendall(pickle.dumps(response))    # So the first loop of the while loop in client works
 
     while True:
         try:
             data = pickle.loads(conn.recv(2048*3))  # Receive game mode initially
-            if not data:    # If the client disconnects they don't send anything
-                break
+            print(f"{data} received")
+            #if not data:    # If the client disconnects they don't send anything
+                #break
 
+            game = games[game_id]   # Just to make writing easier
             if game_id in games:     # If game still exists. Game deleted if client disconnects
-                game = games[game_id]
-                #conn.sendall(pickle.dumps(game))    # Send game to client
-                #game = pickle.loads(conn.recv(2048*3))
+                if data == "None":   # Client didn't do anything
+                    pass    # Doesn't update game
 
-                if data == 3:
-                    game.connected += 1     # So the server knows 1 player has chosen game mode 3
+                elif data == 3:
+                    game.connected += 1     # If a player has chosen a game mode
+                    response = Response(game, None)
+
+                else:   # They sent an action
+                    print("Performing action")
+                    response = data.execute(game)     # Perform the action sent by client
+                    games[game_id] = response.game    # Update game
+                    print("Action executed")
+
+                    if response.payload == "executed":
+                        games[game_id].compare_card()
+                        print("Compared")
+                        response.game = games[game_id]   # Update response
+
+                    #elif response.payload == "drawn" or response.payload == None:
+                        #pass    # The turn isn't incremented, so they have to choose a card again
 
                 if game.connected == 3 and not game.started:     # If 3 players have connected
                     game.play_game(3)       # This code will only happen once
                     game.started = True     # So it doesn't start multiple games
+                    games[game_id] = game   # Update game for all players
+                    response = Response(game, None)
 
                 elif game.finished == True:
                     break
 
-                if game.player_went == True:
-                    game.compare_card()
-                    game.player_went = False    # Becomes True when the next player finishes their turn
+                #if game.player_went == True:
+                    #game.compare_card()
+                    #game.player_went = False    # Becomes True when the next player finishes their turn
 
-                conn.sendall(pickle.dumps(game))    # Send game to client
+                conn.sendall(pickle.dumps(response))    # Send game to client
 
-            else:
+            else:   # Game doesn't exist
                 raise Exception
 
         except socket.error as e:
@@ -70,11 +91,11 @@ def client_thread(conn, player_num, game_id):
             print("The game no longer exists.")     # All players in that game will disconnect
             break
 
-    try:    # Game might have been deleted already
+    try:    # When a client exits the game
         del games[game_id]
         print(f"Closing Game: {game_id}\n")
     except:
-        pass
+        pass    # Game might have been deleted already
 
     print("Lost Connection\n")
     connected_players -= 1
@@ -100,7 +121,8 @@ while True:
         player_number = 2   # Third player = Player 2
 
     elif connected_players == game_id + n:       # Makes the second player = player 1.  (n = 2 then 4 then 6 etc)
-        player_number = 1       # If game_id = 0, P2 is when CP = 2. game_Id = 1, P2 is when CP = 5, GID = 2, P2-> CP = 8
+        player_number = 1       # If game_id = 0, P2 is when connected_players = 2. If game_Id = 1, P2 is when CP = 5,
+                                # game ID = 2, P2-> CP = 8
         n += 2
 
     temp = game_id  # Used to find when a new game is needed
