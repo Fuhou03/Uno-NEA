@@ -29,10 +29,10 @@ def choose_card(player_id, game):
                 new_colour = input("Choose a colour for the next player: ")
                 return PlaceCard(player_id, choice, colour=new_colour)  # Colour an optional parameter
 
-            elif (current_player.deck[choice].colour != game.discard_pile[-1].colour) or \
-                    (current_player.deck[choice].value != game.discard_pile[-1].value):  # Not valid
-                print("That card is not possible. Choose another. \n")
-                continue # They are prompted to choose another card
+            #elif (current_player.deck[choice].colour != game.discard_pile[-1].colour) or \
+                    #(current_player.deck[choice].value != game.discard_pile[-1].value):  # Not valid
+                #print("That card is not possible. Choose another. \n")
+                #continue # They are prompted to choose another card
 
             else:   # The card is valid
                 return PlaceCard(player_id, choice)
@@ -83,7 +83,7 @@ def main():
 
                     net.send(action)    # Send action object to server where it is executed and the game is updated
                 else:   # If it's not your turn
-                    print("\nWaiting for the other player to finish their turn.\n")
+                    #print("\nWaiting for the other player to finish their turn.\n")
                     net.send("None")    # If it's not their turn they don't send any action back
             else:
                 print("\nWaiting for the game to start. \n")
