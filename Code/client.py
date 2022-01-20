@@ -1,7 +1,7 @@
 from network import Network
 from actions import PlaceCard, DrawCard
 
-def choose_card(player_id, game):
+def choose_card(game):
     """ To choose your own card """
 
     current_player = game.player_list[game.turn]
@@ -18,7 +18,7 @@ def choose_card(player_id, game):
         except ValueError:  # If they entered a string
             #self.drew_card = True   # To call the function again after
             #self.draw_card()
-            return DrawCard(player_id)
+            return DrawCard()
 
         except IndexError:
             print("That card is not possible. Please enter the number correctly. \n")
@@ -27,7 +27,7 @@ def choose_card(player_id, game):
         else:
             if current_player.deck[choice].colour == "None":   # wildcard
                 new_colour = input("Choose a colour for the next player: ")
-                return PlaceCard(player_id, choice, colour=new_colour)  # Colour an optional parameter
+                return CheckCard(choice, colour=new_colour)  # Colour an optional parameter
 
             #elif (current_player.deck[choice].colour != game.discard_pile[-1].colour) or \
                     #(current_player.deck[choice].value != game.discard_pile[-1].value):  # Not valid
@@ -35,7 +35,8 @@ def choose_card(player_id, game):
                 #continue # They are prompted to choose another card
 
             else:   # The card is valid
-                return PlaceCard(player_id, choice)
+                return CheckCard(choice)
+
 
 def choose_game_mode():
     try:
@@ -50,7 +51,7 @@ def choose_game_mode():
 
 
 
-def main():
+"""def main():
     net = Network()   # Client connects to server
 
     player_id = net.receive()
@@ -87,7 +88,37 @@ def main():
                     net.send("None")    # If it's not their turn they don't send any action back
             else:
                 print("\nWaiting for the game to start. \n")
-                net.send("None")    # If it's not their turn they don't send any action back
+                net.send("None")    # If it's not their turn they don't send any action back """
+
+def main():
+    net = Network() # To send and receive data from server
+
+    running = True
+
+    while running:
+        try:
+            state = net.receive()
+
+        except Exception as e:
+            print("\n {e} \nRan into an issue when receiving the data.")
+
+        else:
+            if not game.started:
+                game_mode = choose_game_mode()
+                net.send(game_mode)
+            else:
+                if state.payload == "choose":   # It is their turn
+                    state.game.display_info()
+                    action = choose_card(state.game)    # To tell the server to place the card down or draw a card
+                    net.send(action)    # Send action to server
+
+                elif state.payload == "confirm":
+                    confirm = input(f"The {state.game.current_player.deck[-1].colour} - {state.game.current_player.deck[-1].value}"
+                    f" card you picked up is valid, do you want to place it down? Type 'y' or 'n': ")
+
+                    net.send(PlaceCard(confirm))
+
+
 
 main()
 
