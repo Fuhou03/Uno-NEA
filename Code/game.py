@@ -180,9 +180,8 @@ class Uno:
                 self.turn = self.next_turn()
 
         elif self.discard_pile[-1].value == "reverse":
-            self.change_direction()
             print(f"\nPlayer {next_player.id}'s turn is skipped.") # Printed before the reverse
-
+            self.change_direction()
             self.turn = self.next_turn()
 
         elif self.discard_pile[-1].value == "wild 4":
