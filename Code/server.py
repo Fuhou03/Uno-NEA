@@ -38,7 +38,6 @@ def client_thread(conn, player_num, game_id):
     while True:
         try:
             data = pickle.loads(conn.recv(2048*3))  # Receive game mode initially
-            print(f"{data} received")
             #if not data:    # If the client disconnects they don't send anything
                 #break
 
@@ -50,17 +49,18 @@ def client_thread(conn, player_num, game_id):
                 elif data == 3:
                     game.connected += 1     # If a player has chosen a game mode
                     response = Response(game, None)
+                    games[game_id] = game
 
                 else:   # They sent an action
-                    print("Performing action")
+                    print("Performing action")      # Just for testing
                     response = data.execute(game)     # Perform the action sent by client
                     games[game_id] = response.game    # Update game
                     print("Action executed")
 
                     if response.payload == "executed":
-                        games[game_id].compare_card()
+                        response.game.compare_card()
                         print("Compared")
-                        response.game = games[game_id]   # Update response
+                        games[game_id] = response.game  # Update response
 
                     #elif response.payload == "drawn" or response.payload == None:
                         #pass    # The turn isn't incremented, so they have to choose a card again
@@ -73,10 +73,6 @@ def client_thread(conn, player_num, game_id):
 
                 elif game.finished == True:
                     break
-
-                #if game.player_went == True:
-                    #game.compare_card()
-                    #game.player_went = False    # Becomes True when the next player finishes their turn
 
                 conn.sendall(pickle.dumps(response))    # Send game to client
 
