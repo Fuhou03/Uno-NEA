@@ -1,5 +1,9 @@
-from player import Player
 from deck import Deck
+
+class Player:
+    def __init__(self, id):
+        self.deck = []
+        self.id = id
 
 class Uno:
     def __init__(self):
