@@ -9,14 +9,6 @@ port = 5555
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ADDR = (ip, port)
 
-games = {}  # Dictionary to store the game id along with the associated game object
-three_player_count = 0
-connected_players = 0
-game_id = 0
-player_number = 0
-temp = 1
-n = 2   # Used to find the 2nd player
-
 print("Server is starting")
 try:
     server.bind(ADDR)
@@ -27,7 +19,7 @@ server.listen()  # lets multiple clients connect (2 people)
 print("Waiting for a connection\n")
 
 
-def client_thread(conn, player_num, game_id):
+"""def client_thread(conn, player_num, game_id):
     global connected_players
     #global games
 
@@ -66,7 +58,7 @@ def client_thread(conn, player_num, game_id):
                         #pass    # The turn isn't incremented, so they have to choose a card again
 
                 if game.connected == 3 and not game.started:     # If 3 players have connected
-                    game.play_game(3)       # This code will only happen once
+                    game.start_game(3)       # This code will only happen once
                     game.started = True     # So it doesn't start multiple games
                     games[game_id] = game   # Update game for all players
                     response = Response(game, None)
@@ -96,10 +88,10 @@ def client_thread(conn, player_num, game_id):
     print("Lost Connection\n")
     connected_players -= 1
 
-    conn.close()
+    conn.close() """
 
 
-while True:
+"""while True:
     connection, addr = server.accept()
     print(f"Connected to {addr}")
 
@@ -129,7 +121,78 @@ while True:
 
     active_connections = threading.active_count()
     print(f"Active connections : {active_connections - 1}\n")
-    # # The number of threads (clients connected) -1 since the start thread is always running.
+    # # The number of threads (clients connected) -1 since the start thread is always running. """
+
+def play_game(current_game):
+    game = current_game
+    while True:
+        conn = game.get_connection()
+
+        response = Response(game, "choose")
+        conn.send(pickle.dumps(response))     # Sending the game to the client
+
+        try:
+            data = pickle.loads(conn.recv(2048*3))  # Receiving data from client
+        except Exception as e:
+            print(e)
+            print("A player has left so the game will stop.")
+            for player in game.player_list:
+                player.connection.close()     # Closes connection for all players
+        else:
+            if data == 3:
+                game.connections += 1
+                if game.connections == 3:
+                    game.start(data)
+
+            else:
+                response = data.execute(game)
+                print("Action executed")    # Just for testing
+
+                if response.payload == "executed":
+                    game.compare_card()
+                    conn.send(pickle.dumps(response))
+
+                elif response.payload == "confirm":
+                    conn.send(pickle.dumps(response))
+
+                else:
+                    conn.send(pickle.dumps(response))
+
+                    print("Compared")
+
+                game = response.game    # Updating the game
+
+
+
+
+games = {}  # Dictionary to store the game id along with the associated game object
+game_id = 1
+new_game = Uno()
+games[game_id] = new_game  # Creating the first game
+player_id = 0
+
+while True:
+    connection, addr = server.accept()
+    print(f"Connected to {addr}")
+    print(f"Current Game Id : {game_id}\n")
+
+    games[game_id].add_player(player_id, connection)    # To create a new player inside the game
+
+    if games[game_id].connected == 3:   # 3 players have joined (it's incremented when add_player is called)
+        thread = threading.Thread(target=play_game, args=(games[game_id]))   # Create a new thread for every game
+        thread.start()
+
+        game_id += 1    # This is the dictionary key
+        new_game = Uno()
+        games[game_id] = new_game    # Create a new game for the next 3 players that join
+        player_id = 0   # Reset
+
+    else:
+        player_id += 1  # Increments by 1 every time a new player joins (until it becomes 3 and the game begins)
+
+
+
+
 
 
 
