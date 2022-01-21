@@ -19,7 +19,7 @@ def choose_card(game):
             return DrawCard()
 
         except IndexError:
-            print("That card is not possible. Please enter the number correctly. \n")
+            print("That card is not possible. Please enter the number correctly.")
             continue    # They will have to enter again
 
         else:
@@ -60,6 +60,7 @@ def main():
         try:
             state = net.receive()
 
+
         except Exception as e:
             print("\n {str(e)} \nRan into an issue when receiving the data.")
             break
@@ -70,6 +71,7 @@ def main():
                 net.send(game_mode)
             else:
                 if state.payload == "choose" and not went:   # It is their turn
+                    print(f"Current turn: {state.game.turn}")
                     state.game.display_info()
                     action = choose_card(state.game)    # To tell the server to place the card down or draw a card
                     net.send(action)    # Send action to server
@@ -81,6 +83,9 @@ def main():
                     f" card you picked up is valid, do you want to place it down? Type 'y' or 'n': ")
 
                     net.send(PlaceCard(confirm))
+
+                elif state.payload == "executed":
+                    went = False    # So they can choose another card when it is their turn again
 
 
 
