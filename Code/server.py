@@ -141,10 +141,6 @@ def play_game(game, conn_list):
                 conn.close()     # Closes connection for all players
                 break
         else:
-            if data == "stop":
-                for conn in conn_list:
-                    conn.close()     # Closes connection for all players
-                break
             if data == 3:
                 game.connections += 1
                 game.next_turn()    # So the next player selects a game mode
