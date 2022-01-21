@@ -101,9 +101,10 @@ def main():
 
         except Exception as e:
             print("\n {e} \nRan into an issue when receiving the data.")
+            net.send("stop")
 
         else:
-            if not game.started:
+            if not state.game.started:
                 game_mode = choose_game_mode()
                 net.send(game_mode)
             else:
