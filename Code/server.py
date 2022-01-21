@@ -123,10 +123,11 @@ print("Waiting for a connection\n")
     print(f"Active connections : {active_connections - 1}\n")
     # # The number of threads (clients connected) -1 since the start thread is always running. """
 
-def play_game(current_game):
-    game = current_game
+
+def play_game(game, conn_list):
     while True:
-        conn = game.get_connection()
+        #conn = game.get_connection()
+        conn = conn_list[game.turn]     # Get the connection of the player whose turn it is
 
         response = Response(game, "choose")
         conn.send(pickle.dumps(response))     # Sending the game to the client
@@ -136,13 +137,22 @@ def play_game(current_game):
         except Exception as e:
             print(e)
             print("A player has left so the game will stop.")
-            for player in game.player_list:
-                player.connection.close()     # Closes connection for all players
+            for conn in conn_list:
+                conn.close()     # Closes connection for all players
+                break
         else:
+            if data == "stop":
+                for conn in conn_list:
+                    conn.close()     # Closes connection for all players
+                break
             if data == 3:
                 game.connections += 1
+                game.next_turn()    # So the next player selects a game mode
                 if game.connections == 3:
-                    game.start(data)
+                    game.start_game(data)
+                    game.started = True
+                    conn = conn_list[0] # First player's connection
+                    conn.send(pickle.dumps(Response(game, "choose")))
 
             else:
                 response = data.execute(game)
@@ -163,29 +173,29 @@ def play_game(current_game):
                 game = response.game    # Updating the game
 
 
-
-
 games = {}  # Dictionary to store the game id along with the associated game object
+conn_list = []
 game_id = 1
-new_game = Uno()
-games[game_id] = new_game  # Creating the first game
 player_id = 0
+
+games[game_id] = Uno()  # Creating the first game
 
 while True:
     connection, addr = server.accept()
     print(f"Connected to {addr}")
     print(f"Current Game Id : {game_id}\n")
 
-    games[game_id].add_player(player_id, connection)    # To create a new player inside the game
+    games[game_id].add_player(player_id)    # To create a new player inside the game
+    conn_list.append(connection)
 
     if games[game_id].connected == 3:   # 3 players have joined (it's incremented when add_player is called)
-        thread = threading.Thread(target=play_game, args=(games[game_id]))   # Create a new thread for every game
+        thread = threading.Thread(target=play_game, args=(games[game_id], conn_list))   # Create a new thread for every game
         thread.start()
 
         game_id += 1    # This is the dictionary key
-        new_game = Uno()
-        games[game_id] = new_game    # Create a new game for the next 3 players that join
+        games[game_id] = Uno()    # Create a new game for the next 3 players that join
         player_id = 0   # Reset
+        conn_list = []
 
     else:
         player_id += 1  # Increments by 1 every time a new player joins (until it becomes 3 and the game begins)
