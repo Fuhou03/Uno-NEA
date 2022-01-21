@@ -1,5 +1,5 @@
 from network import Network
-from actions import PlaceCard, DrawCard
+from actions import *
 
 def choose_card(game):
     """ To choose your own card """
@@ -16,8 +16,6 @@ def choose_card(game):
                 raise IndexError
 
         except ValueError:  # If they entered a string
-            #self.drew_card = True   # To call the function again after
-            #self.draw_card()
             return DrawCard()
 
         except IndexError:
@@ -25,17 +23,19 @@ def choose_card(game):
             continue    # They will have to enter again
 
         else:
-            if current_player.deck[choice].colour == "None":   # wildcard
+            if (current_player.deck[choice].colour == game.discard_pile[-1].colour) or \
+                    (current_player.deck[choice].value == game.discard_pile[-1].value):  # Not valid
+
+                return CheckCard(choice)
+
+            elif current_player.deck[choice].colour == "None":   # wildcard
                 new_colour = input("Choose a colour for the next player: ")
                 return CheckCard(choice, colour=new_colour)  # Colour an optional parameter
 
-            #elif (current_player.deck[choice].colour != game.discard_pile[-1].colour) or \
-                    #(current_player.deck[choice].value != game.discard_pile[-1].value):  # Not valid
-                #print("That card is not possible. Choose another. \n")
-                #continue # They are prompted to choose another card
+            else:
+                print("That card is not possible. Choose another. \n")
+                continue # They are prompted to choose another card
 
-            else:   # The card is valid
-                return CheckCard(choice)
 
 
 def choose_game_mode():
@@ -50,71 +50,34 @@ def choose_game_mode():
         return game_mode
 
 
-
-"""def main():
-    net = Network()   # Client connects to server
-
-    player_id = net.receive()
-    print(f"\nYou are player {player_id}")    # 0, 1 or 2
-
-    selected_game_mode = False
-    running = True
-
-    while running:
-        try:
-            #n.send("get")   # To get the game
-            state = net.receive()  # Receive response object containing the game
-
-        except:
-            print("\nRan into an issue when receiving the game")
-            running = False
-
-        else:
-            if not selected_game_mode:
-                game_mode = choose_game_mode()
-                if game_mode == 3:
-                   selected_game_mode = True
-                   net.send(game_mode)
-
-            elif state.game.started:   # If they chose a game mode already
-                if player_id == state.game.turn:   # If it's your turn
-
-                    state.game.display_info()
-                    action = choose_card(player_id, state.game)   # Player chooses a card or draws a card
-
-                    net.send(action)    # Send action object to server where it is executed and the game is updated
-                else:   # If it's not your turn
-                    #print("\nWaiting for the other player to finish their turn.\n")
-                    net.send("None")    # If it's not their turn they don't send any action back
-            else:
-                print("\nWaiting for the game to start. \n")
-                net.send("None")    # If it's not their turn they don't send any action back """
-
 def main():
     net = Network() # To send and receive data from server
 
     running = True
+    went = False
 
     while running:
         try:
             state = net.receive()
 
         except Exception as e:
-            print("\n {e} \nRan into an issue when receiving the data.")
-            net.send("stop")
+            print("\n {str(e)} \nRan into an issue when receiving the data.")
+            break
 
         else:
             if not state.game.started:
                 game_mode = choose_game_mode()
                 net.send(game_mode)
             else:
-                if state.payload == "choose":   # It is their turn
+                if state.payload == "choose" and not went:   # It is their turn
                     state.game.display_info()
                     action = choose_card(state.game)    # To tell the server to place the card down or draw a card
                     net.send(action)    # Send action to server
+                    went = True
 
                 elif state.payload == "confirm":
-                    confirm = input(f"The {state.game.current_player.deck[-1].colour} - {state.game.current_player.deck[-1].value}"
+                    current_p = state.game.player_list[state.game.turn]
+                    confirm = input(f"The {current_p.deck[-1].colour} - {current_p.deck[-1].value}"
                     f" card you picked up is valid, do you want to place it down? Type 'y' or 'n': ")
 
                     net.send(PlaceCard(confirm))
