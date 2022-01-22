@@ -27,7 +27,7 @@ class SignIn:
         self.button_list.append(self.register_rect)
         self.button_list.append(self.login_rect)
 
-    def draw_label(self):
+    def draw_labels(self):
         # Put labels onto screen
         self.interface.screen.blit(self.username_label, (100, 100))
         self.interface.screen.blit(self.password_label, (100, 150))
@@ -37,17 +37,16 @@ class SignIn:
     def draw_buttons(self):
         for b in self.button_list:
             if b == self.register_rect or b == self.login_rect:      # So you can't input text into these rectangles
-                pygame.draw.rect(self.interface.screen, b.colour, b.rect, 2)
+                b.draw_rect(self.interface.screen)
             else:
-                b.draw(self.interface.screen)  # To put the rectangles onto the screen
+                b.draw_text_box(self.interface.screen)  # To put the rectangles onto the screen
 
     def display(self):
         self.create_button_list()
+        self.run_display = True
 
         while self.run_display:
-            self.interface.screen.fill((0, 0, 0))  # Reset screen - Put it before you blit, so it doesn't cover the elements
-            self.draw_label()
-
+            self.interface.screen.fill((0, 0, 0))  # Reset screen before you blit, so it doesn't cover the elements
             self.interface.check_events()
 
             if self.interface.clicked:
@@ -60,9 +59,8 @@ class SignIn:
                     if button.active:  # If the button has been clicked on
                         button.get_text(self.interface.key)
 
-
+            self.draw_labels()
             self.draw_buttons()
-
             pygame.display.update()
             self.interface.clock.tick(60)   # 60 fps
             self.reset_keys()
@@ -77,8 +75,9 @@ class SignIn:
             # If they click on the register button
             self.interface.current_screen = self.interface.register
             self.run_display = False
-            self.interface.register.run_display = True
-
+        elif button == self.login_rect and button.active:
+            self.interface.current_screen = self.interface.main_menu    # Move onto menu
+            self.run_display = False
 
 
 class Register(SignIn):
@@ -97,10 +96,10 @@ class Register(SignIn):
 
     def create_button_list(self):
         super().create_button_list()
-        self.button_list.append(self.confirm_rect)
+        self.button_list.append(self.confirm_rect)  # Adding the 2 extra buttons
         self.button_list.append(self.email_rect)
 
-    def draw_label(self):
+    def draw_labels(self):
         self.interface.screen.blit(self.username_label, (100, 100))
         self.interface.screen.blit(self.password_label, (100, 150))
         self.interface.screen.blit(self.confirm1_label, (100, 185))
@@ -118,8 +117,7 @@ class Register(SignIn):
         super().display()
 
     def change_screen(self, button):
-        if button == self.login_rect and button.active:
+        if button == self.login_rect and button.active or button == self.register_rect and button.active:
             # If they click on the register button
             self.interface.current_screen = self.interface.sign_in
             self.run_display = False
-            self.interface.sign_in.run_display = True   # To go back to the login screen
