@@ -53,11 +53,7 @@ class SignIn:
             if self.interface.clicked:
                 for button in self.button_list:  # Goes through all buttons
                     button.change_colour(self.interface.mouse_pos)  # Colour of box will be grey until clicked on
-                    if button == self.register_rect and button.active and\
-                            self.interface.current_screen != self.interface.register:
-                        # If they click on the register button while on the login screen
-                        self.interface.current_screen = self.interface.register
-                        self.run_display = False
+                    self.change_screen(button)
 
             if self.interface.pressed:
                 for button in self.button_list:
@@ -75,6 +71,13 @@ class SignIn:
         self.interface.clicked = False
         self.interface.pressed = False
         self.interface.key = None
+
+    def change_screen(self, button):
+        if button == self.register_rect and button.active:
+            # If they click on the register button
+            self.interface.current_screen = self.interface.register
+            self.run_display = False
+            self.interface.register.run_display = True
 
 
 
@@ -113,3 +116,10 @@ class Register(SignIn):
 
     def display(self):
         super().display()
+
+    def change_screen(self, button):
+        if button == self.login_rect and button.active:
+            # If they click on the register button
+            self.interface.current_screen = self.interface.sign_in
+            self.run_display = False
+            self.interface.sign_in.run_display = True   # To go back to the login screen
