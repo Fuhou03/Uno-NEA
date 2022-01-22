@@ -29,7 +29,7 @@ class Button():
             self.text += key.unicode  # Unicode is the info of the button pressed.
 
 
-    def draw(self, surface):  # surface = screen
+    def draw_text_box(self, surface):  # surface = screen
         ''' Draw the rectangle onto screen '''
 
         self.input_text = self.font.render(self.text, True, (255, 255, 255))  # Put inputted text onto screen
@@ -38,6 +38,9 @@ class Button():
         self.rect.w = max(350, self.input_text.get_width() + 10)  # Set rect width
         #   Max uses the largest argument, so width is 350 initially. Becomes bigger after text width > 350.
 
-        pygame.draw.rect(surface, self.colour, self.rect, 2)  # Include a borderwidth (2) to blit the border only
+        pygame.draw.rect(surface, self.colour, self.rect, 2)  # Include a border width of 2 to blit the border only
+
+    def draw_rect(self, surface):
+        pygame.draw.rect(surface, self.colour, self.rect, 2)
 
 
