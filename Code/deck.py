@@ -1,6 +1,9 @@
-from card import Card
 import random
 
+class Card:
+    def __init__(self, colour, value):
+        self.colour = colour
+        self.value = value
 
 class Deck:
     def __init__(self):
