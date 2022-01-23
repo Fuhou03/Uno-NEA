@@ -19,9 +19,25 @@ server.listen()  # lets multiple clients connect (2 people)
 print("Waiting for a connection\n")
 
 
+def close_connection(conn_list):
+    for conn in conn_list:
+        conn.close()     # Closes connection for all players
+
 def play_game(game, conn_list):
+    waiting = True
+    while waiting:
+        for conn in conn_list:
+            game_mode = pickle.loads(conn.recv(2048*2))     # Receive the game mode chosen by client
+
+            if game_mode == 3:
+                game.connections += 1
+
+                if game.connections == 3:
+                    game.start_game(game_mode)   # Begin the game once 3 players chose the same game mode
+                    game.started = True
+                    waiting = False
+
     while True:
-        #conn = game.get_connection()
         conn = conn_list[game.turn]     # Get the connection of the player whose turn it is
 
         response = Response(game, "choose")
@@ -29,35 +45,25 @@ def play_game(game, conn_list):
 
         try:
             data = pickle.loads(conn.recv(2048*3))  # Receiving data from client
-        except Exception as e:
-            print(e)
+        except:
             print("A player has left so the game will stop.")
-            for conn in conn_list:
-                conn.close()     # Closes connection for all players
-                break
+            close_connection(conn_list)
+            break
         else:
-            if data == 3:
-                game.connections += 1
-                game.next_turn()    # So the next player selects a game mode
+            response = data.execute(game)
+            print("\nAction Executed")    # Just for testing
 
-                if game.connections == 3:
-                    game.start_game(data)
-                    game.started = True
-                    conn = conn_list[0] # First player's connection
-                    conn.send(pickle.dumps(Response(game, "choose")))
+            if response.payload == "Executed":
+                response.game.compare_card()
+                print("Compared")
 
-            else:   # They sent an action
-                response = data.execute(game)
-                print("Action executed")    # Just for testing
+            game = response.game    # Update the game so it can be sent to the next player
+            if game.finished:   # Player placed down their final card
+                close_connection(conn_list)
+                break
 
-                if response.payload == "executed":
-                    response.game.compare_card()
-                    print("Compared")
-                    if game.finished:
-                        break
-
-                game = response.game    # Update the game
-                conn.send(pickle.dumps(response))
+            print(f"Turn: {game.turn}")
+            conn.send(pickle.dumps(response))
 
 
 games = {}  # Dictionary to store the game id along with the associated game object
