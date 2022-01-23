@@ -1,16 +1,16 @@
 from deck import Deck
 
 class Player:
-    def __init__(self, id, conn):
+    def __init__(self, id):
         self.deck = []
         self.id = id
-        self.connection = conn
+        #self.connection = conn
 
 class Uno:
     def __init__(self):
         self.connected = 0
         self.direction = "clockwise"
-        self.turn = 0  # My turn is 0, P2 is 1
+        self.turn = 0  # My turn is 0, P1 is 1
 
         self.connections = 0
         self.started = False
@@ -19,19 +19,15 @@ class Uno:
         self.player_list = []    # Create the players
         self.discard_pile = []
 
-        #self.current_player = None
         self.dk = Deck()
 
         self.player_0 = None
         self.player_1 = None
         self.player_2 = None
 
-    def get_connection(self):
-        return self.player_list[self.turn].connection   # Return the player's connection, so we can send data to them
-
-    def add_player(self, player_id, conn):
+    def add_player(self, player_id):
         self.connected += 1     # Used to detect if 3 players have joined - then the game can begin
-        self.player_list.append(Player(player_id, conn))    # Create new player
+        self.player_list.append(Player(player_id))    # Create new player
 
 
     """def two_player():
@@ -115,8 +111,8 @@ class Uno:
 
 
     def display_info(self):
-        current_player = self.player_list[self.turn]    # Changes every turn
-        print(f"You are player: {current_player.id}")
+        # self.player_list[self.turn] is the current player
+        print(f"\nYou are player: {self.player_list[self.turn].id}")
 
         print(f"\nThe current direction: {self.direction}")
 
@@ -125,8 +121,8 @@ class Uno:
 
         print("Your deck is:")
 
-        for i in range(0, len(current_player.deck)):
-            print(f"{i}: {current_player.deck[i].colour} - {current_player.deck[i].value}")
+        for i in range(0, len(self.player_list[self.turn].deck)):
+            print(f"{i}: {self.player_list[self.turn].deck[i].colour} - {self.player_list[self.turn].deck[i].value}")
 
 
     def change_direction(self):
@@ -139,11 +135,11 @@ class Uno:
     def next_turn(self):
         """ Increments or decrements the turn variable to determine whose turn is next """
         if self.direction == "clockwise":
-            self.turn = (self.turn + 1) % 3   # Becomes 0 if it reaches 3, becomes 1 if it's 4 etc. to stop index errors
+            self.turn = (self.turn + 1) % 3   # Becomes 0 if it reaches 3, to stop index errors
         else:
             self.turn -= 1
             if self.turn == -1:   # Prevents index errors
-                self.turn = 2    # So it goes back to the AI (turn 2) after P1 has their turn (0)
+                self.turn = 2    # So it goes back to P2 after P0 has their turn
         return self.turn
 
 
@@ -174,38 +170,37 @@ class Uno:
             return self.discard_pile     # No matching card found'''
 
     def compare_card(self):
-        next_player = self.player_list[self.next_turn()] # next_turn called so the index's incremented/decremented
-        current_player = self.player_list[self.turn]    # Changes every turn
+        # self.player_list[self.next_turn()] is the next player
 
-        if len(current_player.deck) == 1:
-            print(f"Player {current_player.id} said UNO!")
+        if len(self.player_list[self.turn].deck) == 1:
+            print(f"Player {self.player_list[self.turn].id} said UNO!")
 
         if self.discard_pile[-1].value == "draw 2":
             # Next player draws 2 and their turn is skipped
-            for i in range(2):
-                next_player.deck = self.dk.draw_card(next_player.deck)
+            for i in range(2):  # next_turn is called so the index is incremented/decremented
+                self.player_list[self.next_turn()].deck = self.dk.draw_card(self.player_list[self.next_turn()].deck)
 
-            print(f"Player {next_player.id}'s turn is skipped.")
+            print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
 
             for i in range(2): # Turn increments twice so it skips the next player
                 self.turn = self.next_turn()
 
         elif self.discard_pile[-1].value == "skip":
-            print(f"Player {next_player.id}'s turn is skipped.")
+            print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
 
             for i in range(2):
                 self.turn = self.next_turn()
 
         elif self.discard_pile[-1].value == "reverse":
-            print(f"\nPlayer {next_player.id}'s turn is skipped.") # Printed before the reverse
+            print(f"\nPlayer {self.player_list[self.next_turn()].id}'s turn is skipped.") # Printed before the reverse
             self.change_direction()
             self.turn = self.next_turn()
 
         elif self.discard_pile[-1].value == "wild 4":
             for i in range(4):  # Next player draws 4 cards
-                next_player.deck = self.dk.draw_card(next_player.deck)
+                self.player_list[self.next_turn()].deck = self.dk.draw_card(self.player_list[self.next_turn()].deck)
 
-            print(f"Player {next_player.id}'s turn is skipped.")
+            print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
 
             for i in range(2):
                 self.turn = self.next_turn()
@@ -213,8 +208,8 @@ class Uno:
         else:  # Normal numbered card placed down
             self.turn = self.next_turn()
 
-        if len(current_player.deck) == 0:
-            print(f"Player {current_player.id} has won! The game has completed.")
+        if len(self.player_list[self.turn].deck) == 0:
+            print(f"Player {self.player_list[self.turn].id} has won! The game has completed.")
             self.finished = True
 
 
@@ -222,7 +217,6 @@ class Uno:
         """ Give each player 7 cards and add the card at the top of the deck to the discard pile """
         self.dk.create_deck()
         self.dk.shuffle()
-        #self.player_list = [Player(0), Player(1), Player(2)]
 
         for player in self.player_list:
             player.deck = self.dk.deal_cards(player.deck)    # Give the players 7 cards
