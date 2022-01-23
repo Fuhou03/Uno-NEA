@@ -192,11 +192,20 @@ class GameMode(Menu):
                 if button.rect.y == self.cursor.rect.y:     # If the cursor rect overlaps with that button
 
                     if button == self.two_player_button:
-                        pass
+                        self.interface.game_mode_choice = 2
+                        self.run_display = False
+                        self.interface.running = False    # Stops the display
+
                     elif button == self.three_player_button:
-                        pass
+                        self.interface.game_mode_choice = 3
+                        self.run_display = False
+                        self.interface.running = False    # Stops the display
+
                     elif button == self.four_player_button:
-                        pass
+                        self.interface.game_mode_choice = 4
+                        self.run_display = False
+                        self.interface.running = False    # Stops the display
+
 
         elif self.interface.BACK_KEY:   # Goes back to the main menu
             self.interface.current_screen = self.interface.main_menu
