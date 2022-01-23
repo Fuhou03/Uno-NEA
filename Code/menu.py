@@ -4,16 +4,19 @@ from login import SignIn
 
 class MainMenu:
     def __init__(self, interface):
-        #super().__init__(interface)
         self.interface = interface
         self.state = None
         self.run_display = True
         
         self.MID_W, self.MID_H = 400, 350
 
-        self.font = pygame.font.Font(None, 90)
-        self.play_label = self.font.render("Play", True, (255, 255, 255))
-        self.option_label = self.font.render("Option", True, (255, 255, 255))
+        self.button_font = pygame.font.Font(None, 90)
+        self.text_font = pygame.font.Font(None, 30)
+
+        self.play_label = self.button_font.render("Play", True, (255, 255, 255))
+        self.option_label = self.button_font.render("Option", True, (255, 255, 255))
+        self.enter_desc = self.text_font.render("Press Enter To Select ", True, (255, 255, 255))
+        self.back_desc = self.text_font.render("Press Backspace To Go Back", True, (255, 255, 255))
 
 
         self.PLAY_X, self.PLAY_Y = self.MID_W, self.MID_H - 70
@@ -34,6 +37,9 @@ class MainMenu:
             self.interface.screen.blit(self.play_label, (self.MID_W + 62, self.MID_H - 60))
             self.interface.screen.blit(self.option_label, (self.MID_W + 35, self.MID_H + 82))
 
+            self.interface.screen.blit(self.enter_desc, (self.MID_W + 300, self.MID_H + 400))
+            self.interface.screen.blit(self.back_desc, (self.MID_W - 350, self.MID_H + 400))
+
             self.interface.check_events()
             self.check_input()
 
@@ -45,11 +51,12 @@ class MainMenu:
             self.reset_keys()
 
     def move_cursor(self):
-        if self.interface.DOWN_KEY:     # To select a button
-            self.cursor.rect.y += 140
-
-        elif self.interface.UP_KEY:
-            self.cursor.rect.y -= 140
+        if self.cursor.rect.y != self.option_button.rect.y:
+            if self.interface.DOWN_KEY:     # To select a button
+                self.cursor.rect.y += 140
+        elif self.cursor.rect.y != self.play_button.rect.y:
+            if self.interface.UP_KEY:
+                self.cursor.rect.y -= 140
 
     def check_input(self):
         self.move_cursor()
