@@ -1,5 +1,6 @@
 from network import Network
 from actions import *
+from interface import Interface
 
 def choose_card(game):
     """ To choose your own card """
@@ -37,21 +38,11 @@ def choose_card(game):
                 continue # They are prompted to choose another card
 
 
-
-def choose_game_mode():
-    try:
-        game_mode = int(input("Choose a game mode by typing either '2' or '3': "))
-        if game_mode < 2 or game_mode > 3:
-            raise Exception
-    except:
-        print("That is not a valid game mode, please type it in correctly")
-        return None
-    else:
-        return game_mode
-
-
 def main():
     net = Network() # To send and receive data from server
+    interface = Interface()
+    while interface.running:
+        interface.current_screen.display()  # Prompts client to login and allows them to navigate through the menus
 
     running = True
     went = False
@@ -60,14 +51,13 @@ def main():
         try:
             state = net.receive()
 
-
-        except Exception as e:
-            print("\n {str(e)} \nRan into an issue when receiving the data.")
+        except:
+            print("\nRan into an issue when receiving the data.")
             break
 
         else:
             if not state.game.started:
-                game_mode = choose_game_mode()
+                game_mode = interface.game_mode_choice     # Either 2, 3 or 4
                 net.send(game_mode)
             else:
                 if state.payload == "choose" and not went:   # It is their turn
