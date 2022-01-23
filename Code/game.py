@@ -11,6 +11,7 @@ class Uno:
         self.connected = 0
         self.direction = "clockwise"
         self.turn = 0  # My turn is 0, P1 is 1
+        #self.next_turn = 0  # Used as an index to find the next player
 
         self.connections = 0
         self.started = False
@@ -134,13 +135,14 @@ class Uno:
 
     def next_turn(self):
         """ Increments or decrements the turn variable to determine whose turn is next """
+        next_turn = self.turn
         if self.direction == "clockwise":
-            self.turn = (self.turn + 1) % 3   # Becomes 0 if it reaches 3, to stop index errors
+            next_turn = (self.turn + 1) % 3     # Becomes 0 if it reaches 3, to stop index errors
         else:
-            self.turn -= 1
-            if self.turn == -1:   # Prevents index errors
-                self.turn = 2    # So it goes back to P2 after P0 has their turn
-        return self.turn
+            next_turn -= 1
+            if next_turn == -1:   # Prevents index errors
+                next_turn = 2    # So it goes back to P2 after P0 has their turn
+        return next_turn
 
 
         '''elif player.id == 2:   # Program selects the card for P3 (AI)
@@ -173,11 +175,12 @@ class Uno:
         # self.player_list[self.next_turn()] is the next player
 
         if len(self.player_list[self.turn].deck) == 1:
+            pass
             print(f"Player {self.player_list[self.turn].id} said UNO!")
 
         if self.discard_pile[-1].value == "draw 2":
             # Next player draws 2 and their turn is skipped
-            for i in range(2):  # next_turn is called so the index is incremented/decremented
+            for i in range(2):  # next_turn is called so you get the index of the next player
                 self.player_list[self.next_turn()].deck = self.dk.draw_card(self.player_list[self.next_turn()].deck)
 
             print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
@@ -222,7 +225,7 @@ class Uno:
             player.deck = self.dk.deal_cards(player.deck)    # Give the players 7 cards
 
         for i in range(0, len(self.dk.deck)): # So the game doesn't start with a wild card
-            if self.dk.deck[i].colour != "None":
+            if self.dk.deck[i].colour != None:
                 self.discard_pile.append(self.dk.deck[i]) # Card at the top of the deck is placed down first (index 0)
                 break
 
