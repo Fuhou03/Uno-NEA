@@ -1,5 +1,7 @@
 import pygame
 from button import Button
+from deck import Deck #
+
 
 class Menu:
     def __init__(self, interface):
@@ -23,8 +25,8 @@ class Menu:
         self.interface.UP_KEY = False
 
 class MainMenu(Menu):
-    def __init__(self, interface):
-        super().__init__(interface)
+    def __init__(self, interface):      # Having interface as an argument allows us to its variables and the screen
+        super().__init__(interface)     # Inherit from Menu class to access its attributes and methods
         self.title_font = pygame.font.Font(None, 170)
         self.play_label = self.menu_font.render("Play", True, (255, 255, 255))
         self.option_label = self.menu_font.render("Options", True, (255, 255, 255))
@@ -137,6 +139,8 @@ class GameMode(Menu):
     def __init__(self, interface):
         super().__init__(interface)
         self.font = pygame.font.Font(None, 50)
+        self.running = True
+        self.waiting_text = self.button_font.render("Waiting For Other Players", True, (255, 255, 255))
 
         self.two_player_label = self.button_font.render("Two Player", True, (255, 255, 255))
         self.two_player_button = Button(self.MID_W, self.MID_H - 120, 280, 60)  # x, y, width, height
@@ -191,25 +195,82 @@ class GameMode(Menu):
             for button in self.button_list:     # Finds the button selected
                 if button.rect.y == self.cursor.rect.y:     # If the cursor rect overlaps with that button
 
-                    if button == self.two_player_button:
-                        self.interface.game_mode_choice = 2
-                        self.run_display = False
-                        self.interface.running = False    # Stops the display
+                    if button == self.two_player_button:    # Sets the chosen game mode to a variable
+                        self.interface.game_mode_choice = 2     # Their choice will be sent to the server after
 
                     elif button == self.three_player_button:
                         self.interface.game_mode_choice = 3
-                        self.run_display = False
-                        self.interface.running = False    # Stops the display
 
                     elif button == self.four_player_button:
                         self.interface.game_mode_choice = 4
-                        self.run_display = False
-                        self.interface.running = False    # Stops the display
+
+                    self.run_display = False
+                    self.interface.current_screen = self.interface.game_display
+                    #self.interface.running = False
+                    #pygame.quit()      # To close the window
+                    #self.waiting()
+
 
 
         elif self.interface.BACK_KEY:   # Goes back to the main menu
             self.interface.current_screen = self.interface.main_menu
             self.run_display = False
+
+
+    def waiting(self):
+        while self.running:
+            self.interface.screen.fill((0,0,0))
+            self.interface.screen.blit(self.waiting_text, (self.MID_W, self.MID_H + 15))
+
+            pygame.display.update()
+            self.interface.clock.tick(60)   # 60 fps
+
+
+class GameDisplay(Menu):
+    def __init__(self, interface):
+        super().__init__(interface)
+        self.dk = Deck()
+        self.dk.create_deck()
+        self.offset = -150
+
+    def display(self):
+        self.run_display = True
+        done = False
+        while self.run_display:
+            self.interface.screen.fill((0, 0, 0))
+
+            new_deck = self.dk.deck[:7]
+
+            if not done:
+                for card in new_deck:
+                    img = pygame.image.load(card.image).convert_alpha()
+                    width = img.get_width()
+                    height = img.get_height()
+                    image = pygame.transform.scale(img, ((width * 0.15), (height * 0.15)))
+                    self.interface.screen.blit(image, (self.MID_W + self.offset, self.MID_H + 250))
+                    self.offset += 80
+                pygame.display.update()
+                done = True
+
+                #img_rect = self.img.get_rect()
+
+
+            #self.interface.check_events()
+            #self.check_input()
+
+            #for b in self.button_list:
+            #b.draw_rect(self.interface.screen)
+
+
+            #self.interface.clock.tick(60)   # 60 fps
+            #self.reset_keys()
+
+    def check_input(self):
+        pass
+
+
+
+
 
 
 
