@@ -1,57 +1,27 @@
 from network import Network
-from actions import *
 from interface import Interface
-import pygame
-
-def choose_card(game):
-    """ To choose your own card """
-
-    # game.player_list[game.turn] is the Current Player
-
-    valid = False
-    while not valid:
-        try:
-            choice = int(input("\nChoose a card by typing it's number at the front. \n"
-                               "If you have no valid cards then type any string to draw a card: "))
-            print("")
-            if choice >= len(game.player_list[game.turn].deck) or choice < 0:  # If they enter an invalid number
-                raise IndexError
-
-        except ValueError:  # If they entered a string
-            return DrawCard()
-
-        except IndexError:
-            print("That card is not possible. Please enter the number correctly.")
-            continue    # They will have to enter again
-
-        else:
-            if (game.player_list[game.turn].deck[choice].colour == game.discard_pile[-1].colour) or \
-                    (game.player_list[game.turn].deck[choice].value == game.discard_pile[-1].value):  # Not valid
-
-                return PlaceCard(choice)
-
-            elif game.player_list[game.turn].deck[choice].colour == None:   # wildcard
-                new_colour = input("Choose a colour for the next player: ")
-                return PlaceCard(choice, colour=new_colour)  # Colour is an optional parameter
-
-            else:   # The card they pick does not match in colour or value
-                print("That card is not possible. Choose another. \n")
-                continue # They are prompted to choose another card
-
 
 def main():
-    net = Network() # To send and receive data from server
     interface = Interface()
 
+    sent = False
     while interface.running:
         interface.current_screen.display()  # Prompts client to login and allows them to navigate through the menus
 
-    pygame.quit()
-    net.send(interface.game_mode_choice)    # Sends their selected game mode to the server
+        if not sent and interface.game_mode_choice != 0:  # If they chose a game mode & they haven't sent it to server
+            net = Network()     # Connects the client to the server after they select a game mode
+            net.send(interface.game_mode_choice)
+            sent = True     # So the client only sends it once
 
+            while True:
+                interface.game_mode.waiting_screen()    # Displays the waiting screen
+
+                if net.receive():   # Receives "Started" when the game has begun
+                    interface.running = False
+                    player_number = net.receive()   # Receive your player number from the server
+                    break
 
     running = True
-    went = False
 
     while running:
         try:
@@ -59,31 +29,42 @@ def main():
 
         except:
             print("\nRan into an issue when receiving the data.")
-            break
+            running = False
 
         else:
-            if state.game.started:
-                if state.payload == "choose" and not went:   # It is their turn
-                    state.game.display_info()
-                    action = choose_card(state.game)    # Used to tell the server to place the card down or draw a card
-                    net.send(action)    # Send action to server
-                    went = True     # So they cannot place another card down
+            if state.game.turn == player_number:    # If it's your turn you perform an action
+                interface.game_screen.action = None     # Reset the action
 
-                elif state.payload == "confirm":
-                    #current_p = state.game.player_list[state.game.turn]
-                    confirm = input(f"The {state.game.player_list[state.game.turn].deck[-1].colour}"
-                                    f" - {state.game.player_list[state.game.turn].deck[-1].value}"
-                    f" card you picked up is valid, do you want to place it down? Type 'y' or 'n': ")
+                if state.payload == "choose":
+                    while not interface.card_chosen:   # Client hasn't chosen card yet
+                        print(player_number)
+                        interface.game_screen.display(player_number, state.game) # To display the game screen
 
-                    net.send(Decision(confirm))
-                    went = True
+                    interface.card_chosen = False   # Reset it so they can choose another card next turn
 
-                elif state.payload == "Executed" or state.payload == None:
+                elif state.payload == "Confirm":
+                    interface.game_screen.confirm = True
+
+                    while interface.game_screen.confirm:
+                        interface.game_screen.ask()     # Asks the user if they want to place the drawn card down
+
+                #elif state.payload == "Executed" or state.payload == None:
                     # None when they don't place down the card they picked up. "Executed" if the card was placed down.
-                    print(f"Current turn: {state.game.turn}")
-                    went = False    # So they can choose another card when it is their turn again
+
+                action = interface.game_screen.action
+                net.send(action)
+                alert = net.receive()   # Tells the client that the action was executed
+
+            else:   # If it's not your turn
+                while True:
+                    print(player_number)    # Received "Executed" here for p3
+                    interface.game_screen.display(player_number, state.game)
+
+                    if net.receive():   # When a player has made a move you receive data
+                        break   # To return to the main loop
 
 
 
-main()
+if __name__ == "__main__":
+    main()
 
