@@ -254,7 +254,7 @@ class GameScreen(Menu):
         self.cursor = Button(self.MID_W + 100, self.MID_H, 300, 80)
         self.cursor.colour = self.cursor.colour_active
 
-        self.draw_button = Button(self.MID_W - 100, self.MID_H + 150, 200, 60)
+        self.draw_button = Button(self.MID_W - 100, self.MID_H + 185, 200, 60)
         self.draw_text = self.text_font.render("Draw", True, (255, 255, 255))
 
         self.yes_button = Button(self.MID_W + 100, self.MID_H, 300, 80)
@@ -262,21 +262,26 @@ class GameScreen(Menu):
         self.no_button = Button(self.MID_W - 400, self.MID_H, 300, 80)
         self.no_text = self.button_font.render("No", True, (255, 255, 255))
 
-        self.chosen_card = None
+        self.chosen_card = None     # Assigned later
         self.deck = None
         self.action = None
         self.player_id = None
         self.game = None
 
+
         self.image_list = []
+        self.image_list_length = 7
+        self.number_of_cards_changed = False
+        self.total_image_width = None   # Used to center all your images
+        self.cursor_rect = None
 
-        self.temp_deck = Deck()    # Used to create the cursor rect
-        self.temp_deck.create_deck()
+        #self.temp_deck = Deck()    # Used to create the cursor rect
+        #self.temp_deck.create_deck()
 
-        self.add_image(self.temp_deck.deck[0])   # Creating a temporary image which is used to create cursor
+        #self.add_image(self.temp_deck.deck[0])   # Creating a temporary image which is used to create cursor
         # Create a rectangle with same width and height as the card image
-        self.cursor_rect = self.image_list[0].image.get_rect(topleft=(self.MID_W + self.offset, self.MID_H + 270))
-        self.image_list.pop()   # Remove the temp image
+        #self.cursor_rect = self.image_list[0].image.get_rect(topleft=(self.MID_W, self.MID_H + 270))
+        #self.image_list.pop()   # Remove the temp image
 
     def create_images(self):
         """ Creates the images for all the cards in your deck """
@@ -293,7 +298,7 @@ class GameScreen(Menu):
 
     def reset_offsets(self):
         """ To display the cards in the correct position in the next loop of the while loop """
-        self.offset = -320
+        self.offset = 0
         self.opponent_x_offset = -480
         self.opponent_y_offset = -340
 
@@ -301,54 +306,88 @@ class GameScreen(Menu):
         """ Displays all the cards onto the screen and allows you to select a card if it's your turn """
         self.player_id = player_id
         self.game = game
-        self.interface.screen.fill((0, 0, 0))
+        self.interface.screen.fill((0, 100, 255))
         self.interface.check_events()   # Check for key presses
 
         if not self.chosen_card:    # Stops the self.deck from being overwritten
             self.deck = self.game.player_list[player_id].deck
-
         self.create_images()
-        self.draw_button.draw_rect(self.interface.screen)
-        self.interface.screen.blit(self.draw_text, (self.MID_W - self.draw_text.get_width() / 2, self.MID_H + 170))
 
-        left_opponent = self.game.player_list[(self.player_id + 1) % len(self.game.player_list)]   # % To get the 1st index when needed
+        self.draw_button.draw_rect(self.interface.screen)   # Put draw button and text onto screen
+        self.interface.screen.blit(self.draw_text, (self.MID_W - self.draw_text.get_width() / 2, self.MID_H + 205))
+
+        RIGHT_ID = self.player_id - 1   # The player id's of the opponents
+        if RIGHT_ID == -1:  # So it doesn't print -1
+            RIGHT_ID = len(self.game.player_list) - 1   # The final player in the list
+
+        LEFT_ID = (self.player_id + 1) % len(self.game.player_list)     # % To get the 1st index when needed
         # e.g In 3 player mode, if it's player 2, the left becomes player 0: (2+1) % 3 = 0
-        right_opponent = self.game.player_list[self.player_id - 1]
 
+        id_text = self.button_font.render("P" + str(self.player_id), True, (255, 255, 255))
+        right_text = self.button_font.render("P" + str(RIGHT_ID), True, (255, 255, 255))
+        left_text = self.button_font.render("P" + str(LEFT_ID), True, (255, 255, 255))
+        self.interface.screen.blit(id_text, (self.MID_W - id_text.get_width() / 2, self.MID_H + 125))
+        self.interface.screen.blit(right_text, (self.MID_W - 460, self.MID_H - 400))
+        self.interface.screen.blit(left_text, (self.MID_W + 420, self.MID_H - 400))
+
+        left_opponent = self.game.player_list[LEFT_ID]
+        right_opponent = self.game.player_list[RIGHT_ID]
+
+        # The length from the left side of your first card to the right side of your last card (To keep them centered)
+        total_image_width = (self.image_list[0].image.get_width() * len(self.image_list)) -\
+                            ((self.image_list[0].image.get_width() - 90) * len(self.image_list))
+
+        if len(self.image_list) != self.image_list_length:
+            self.image_list_length = len(self.image_list)    # Used to adjust the cursor rect coordinates
+            self.number_of_cards_changed = True
+
+        # Displaying your cards on the screen
         for Image in self.image_list:   # Go through the Image objects in the image_list and set their co-ordinates
-            self.interface.screen.blit(Image.image, (self.MID_W + self.offset, self.MID_H + 270))  # Blit your cards
+            # Blit your cards   # self.offset is 0 initially then is incremented each time so the cards overlap
 
-            Image.x = self.MID_W + self.offset   # Assign values to the Image object's x and y attributes
-            Image.y = self.MID_H + 270
+            Image.x = self.MID_W - (total_image_width / 2) + self.offset
+            Image.y = self.MID_H + 270  # Assign values to the Image object's x and y attributes
+            self.interface.screen.blit(Image.image, (Image.x, Image.y))
+
             Image.rect = Image.image.get_rect(topleft=(Image.x, Image.y))  # Create a rect of the same size as the image
             self.offset += 90
 
-        if self.chosen_card:     # Put the chosen card in the centre of screen
+
+        # Put the chosen card in the centre of screen
+        if self.chosen_card:
             self.interface.screen.blit(self.chosen_card, (self.MID_W - self.chosen_card.get_width() / 2,
-                                                          self.MID_H - self.chosen_card.get_height() / 2))
+                                                          self.MID_H - 20 - self.chosen_card.get_height() / 2))
         else:   # Blit the card at the top of the discard pile in the centre
             self.add_image(self.game.discard_pile[-1])  # Get the image from that card
             top_card = self.image_list[-1].image
             self.interface.screen.blit(top_card, (self.MID_W - top_card.get_width() / 2,
                                                   self.MID_H - top_card.get_height() / 2))
 
-        for i in range(0, len(left_opponent.deck)):     # Display the left opponent's cards faced down
+
+        # Displaying the opponent's cards faced down
+        for i in range(0, len(left_opponent.deck)):
             self.interface.screen.blit(self.back_image,
                                        (self.MID_W + self.opponent_x_offset, self.MID_H + self.opponent_y_offset))
             self.opponent_y_offset += 60    # So the cards move downwards
 
-        self.opponent_x_offset = 400   # To blit the cards of the opponent on the right
-        self.opponent_y_offset = -340   # Reset it for the other opponent
+        self.reset_offsets()    # Reset it for the other opponent
+        self.opponent_x_offset = 480 - self.back_image.get_width()    # To blit the cards of the opponent on the right
 
-        for j in range(0, len(right_opponent.deck)):    # Displaying the cards of the opponent on the right
+        for j in range(0, len(right_opponent.deck)):
             self.interface.screen.blit(self.back_image, (self.MID_W + self.opponent_x_offset,
                                                          self.MID_H + self.opponent_y_offset))
             self.opponent_y_offset += 60    # So the cards move downwards
 
-        if self.game.turn == self.player_id and not self.chosen_card:  # Allows them to select a card if it's their turn
-            # Draw the cursor rectangle; 2 blits the border only
-            pygame.draw.rect(self.interface.screen, pygame.Color("black"), self.cursor_rect, 2)
 
+        # Allows them to select a card if it's their turn
+        if self.game.turn == self.player_id and not self.chosen_card:
+            # Draw the cursor rectangle; 2 blits the border only
+            if not self.cursor_rect or self.number_of_cards_changed:    # Create the rectangle
+                self.cursor_rect = self.image_list[0].image.get_rect(topleft=(self.MID_W - (total_image_width / 2),
+                                                                          self.MID_H + 270))
+                self.number_of_cards_changed = False
+
+            pygame.draw.rect(self.interface.screen, pygame.Color("black"), self.cursor_rect, 2)
             self.check_input()
 
         else:   # If it's not their turn, they cannot perform any actions
@@ -379,7 +418,6 @@ class GameScreen(Menu):
             self.cursor_rect.y -= 1000  # Bring it back onto screen
             self.draw_button.active = False
             self.draw_button.colour = self.draw_button.colour_passive
-
 
     def check_input(self):
         """ Checks if they have pressed a key and performs the necessary actions """
