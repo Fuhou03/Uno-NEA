@@ -70,11 +70,15 @@ def play_game(game, conn_list):
 
         game = response.game    # Update the game so the updated version is sent to all players
 
-        for conn in conn_list:
-            conn.sendall(pickle.dumps(response.payload))   # So all clients receive the response below at the same time
-            conn.sendall(pickle.dumps(response))   # Send the game back to all clients
-
-            time.sleep(0.1)
+        if not confirming:
+            for conn in conn_list:
+                conn.sendall(pickle.dumps(response.payload)) # So all clients receive the response below at the same time
+                time.sleep(0.05)
+                conn.sendall(pickle.dumps(response))   # Send the game back to all clients
+                time.sleep(0.1)
+        else:   # When confirming with the current player it only sends data to them so that the other players will wait
+            conn_list[game.turn].sendall(pickle.dumps(response.payload))
+            conn_list[game.turn].sendall(pickle.dumps(response))
 
         time.sleep(0.1)
 
