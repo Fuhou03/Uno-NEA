@@ -52,6 +52,7 @@ class MainMenu(Menu):
         self.button_list = [self.play_button, self.option_button, self.cursor]
 
     def display(self):
+        """ Displays the text and buttons and checks if they pressed a key """
         self.run_display = True
         while self.run_display:
             self.interface.screen.fill((0,0,0))
@@ -76,6 +77,7 @@ class MainMenu(Menu):
             self.reset_keys()
 
     def move_cursor(self):
+        """ Moves the cursor up and down if you pressed the corresponding key """
         if self.interface.DOWN_KEY:     # If they pressed the Down arrow key
             if self.cursor.rect.y != self.option_button.rect.y:     # Stops the cursor from moving above/below button
                 self.cursor.rect.y += 160   # Moves the cursor up and down
@@ -85,6 +87,7 @@ class MainMenu(Menu):
                 self.cursor.rect.y -= 160
 
     def check_input(self):
+        """ Checks if they pressed a key """
         self.move_cursor()
 
         if self.interface.ENTER_KEY:    # If they pressed enter
@@ -212,17 +215,15 @@ class GameMode(Menu):
                         self.interface.game_mode_choice = 4
 
                     self.run_display = False
-                    #self.waiting = True     # So the client calls the waiting_screen method
-
 
         elif self.interface.BACK_KEY:   # Goes back to the main menu
             self.interface.current_screen = self.interface.main_menu
             self.run_display = False
 
-
     def waiting_screen(self):
         """ This is displayed while you wait for other players to join """
         self.interface.screen.fill((0,0,0))
+        self.interface.check_events()
         self.interface.screen.blit(self.waiting_text, (self.MID_W - self.waiting_text.get_width() / 2,
                                                        self.MID_H - self.waiting_text.get_height() / 2))
 
@@ -253,6 +254,9 @@ class GameScreen(Menu):
         self.cursor = Button(self.MID_W + 100, self.MID_H, 300, 80)
         self.cursor.colour = self.cursor.colour_active
 
+        self.draw_button = Button(self.MID_W - 100, self.MID_H + 150, 200, 60)
+        self.draw_text = self.text_font.render("Draw", True, (255, 255, 255))
+
         self.yes_button = Button(self.MID_W + 100, self.MID_H, 300, 80)
         self.yes_text = self.button_font.render("Yes", True, (255, 255, 255))
         self.no_button = Button(self.MID_W - 400, self.MID_H, 300, 80)
@@ -266,10 +270,10 @@ class GameScreen(Menu):
 
         self.image_list = []
 
-        self.dk = Deck()    # Used to create the cursor rect
-        self.dk.create_deck()
+        self.temp_deck = Deck()    # Used to create the cursor rect
+        self.temp_deck.create_deck()
 
-        self.add_image(self.dk.deck[0])   # Creating a temporary image which is used to create cursor
+        self.add_image(self.temp_deck.deck[0])   # Creating a temporary image which is used to create cursor
         # Create a rectangle with same width and height as the card image
         self.cursor_rect = self.image_list[0].image.get_rect(topleft=(self.MID_W + self.offset, self.MID_H + 270))
         self.image_list.pop()   # Remove the temp image
@@ -294,14 +298,18 @@ class GameScreen(Menu):
         self.opponent_y_offset = -340
 
     def display(self, player_id, game):
+        """ Displays all the cards onto the screen and allows you to select a card if it's your turn """
         self.player_id = player_id
         self.game = game
         self.interface.screen.fill((0, 0, 0))
+        self.interface.check_events()   # Check for key presses
 
         if not self.chosen_card:    # Stops the self.deck from being overwritten
             self.deck = self.game.player_list[player_id].deck
 
         self.create_images()
+        self.draw_button.draw_rect(self.interface.screen)
+        self.interface.screen.blit(self.draw_text, (self.MID_W - self.draw_text.get_width() / 2, self.MID_H + 170))
 
         left_opponent = self.game.player_list[(self.player_id + 1) % len(self.game.player_list)]   # % To get the 1st index when needed
         # e.g In 3 player mode, if it's player 2, the left becomes player 0: (2+1) % 3 = 0
@@ -324,15 +332,15 @@ class GameScreen(Menu):
             self.interface.screen.blit(top_card, (self.MID_W - top_card.get_width() / 2,
                                                   self.MID_H - top_card.get_height() / 2))
 
-        for i in range(0, len(left_opponent.deck)):     # Display the opponent's cards faced down
+        for i in range(0, len(left_opponent.deck)):     # Display the left opponent's cards faced down
             self.interface.screen.blit(self.back_image,
                                        (self.MID_W + self.opponent_x_offset, self.MID_H + self.opponent_y_offset))
             self.opponent_y_offset += 60    # So the cards move downwards
 
-        self.opponent_x_offset = 400   # To blit on the right side of the screen
-        self.opponent_y_offset = -340   # Reset it
+        self.opponent_x_offset = 400   # To blit the cards of the opponent on the right
+        self.opponent_y_offset = -340   # Reset it for the other opponent
 
-        for j in range(0, len(right_opponent.deck)):
+        for j in range(0, len(right_opponent.deck)):    # Displaying the cards of the opponent on the right
             self.interface.screen.blit(self.back_image, (self.MID_W + self.opponent_x_offset,
                                                          self.MID_H + self.opponent_y_offset))
             self.opponent_y_offset += 60    # So the cards move downwards
@@ -341,7 +349,6 @@ class GameScreen(Menu):
             # Draw the cursor rectangle; 2 blits the border only
             pygame.draw.rect(self.interface.screen, pygame.Color("black"), self.cursor_rect, 2)
 
-            self.interface.check_events()
             self.check_input()
 
         else:   # If it's not their turn, they cannot perform any actions
@@ -354,17 +361,31 @@ class GameScreen(Menu):
         self.image_list = []    # Reset it since the user may have drawn or placed down a card
 
     def move_cursor(self):
-        if self.interface.LEFT_KEY:     # If they pressed left or right
+        """ Move the cursor rectangle left or right to select a card, or up and down to press the 'Draw' button """
+        if self.interface.LEFT_KEY and not self.draw_button.active:     # If they pressed left or right
             if self.cursor_rect.x != self.image_list[0].x:  # If the cursor is not on the left-most image
                 self.cursor_rect.x -= 90    # Moves the cursor rectangle
-        elif self.interface.RIGHT_KEY:      # image_list[-1].rect.x? V
+
+        elif self.interface.RIGHT_KEY and not self.draw_button.active:      # image_list[-1].rect.x? V
             if self.cursor_rect.x != self.image_list[-1].x:  # If the cursor is not on the left-most image
                 self.cursor_rect.x += 90
 
+        elif self.interface.UP_KEY and not self.draw_button.active:
+            self.draw_button.colour = self.draw_button.colour_active
+            self.draw_button.active = True
+            self.cursor_rect.y += 1000  # Move it out of the screen
+
+        elif self.interface.DOWN_KEY and self.draw_button.active:
+            self.cursor_rect.y -= 1000  # Bring it back onto screen
+            self.draw_button.active = False
+            self.draw_button.colour = self.draw_button.colour_passive
+
+
     def check_input(self):
+        """ Checks if they have pressed a key and performs the necessary actions """
         self.move_cursor()
 
-        if self.interface.ENTER_KEY:
+        if self.interface.ENTER_KEY and not self.draw_button.active:
             for image in self.image_list:   # == image.rect.x ?
                 if self.cursor_rect.x == image.x:   # If the cursor overlaps with the image's rectangle
                     card_index = self.image_list.index(image)   # The pos of the chosen card in the image list and deck
@@ -378,13 +399,13 @@ class GameScreen(Menu):
                     else:   # The card they pick does not match in colour or value
                         pass    # They are prompted to choose another card
 
-        else:
-            pass    # Display "Not ur turn" on screen
-
+        elif self.interface.ENTER_KEY and self.draw_button.active:
+            self.action = DrawCard()    # To tell the server after that the player wants to draw a card
+            self.interface.card_chosen = True   # Stops the loop in the client
 
 
     def choose_card(self, choice):
-        """ To choose your own card """
+        """ Checks if your chosen card is valid and adds your selected card into an action object """
         # Add the draw card option
 
         current_player = self.game.player_list[self.player_id]
