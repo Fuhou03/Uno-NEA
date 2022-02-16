@@ -66,16 +66,15 @@ def main():
             net.client.setblocking(False)   # Stops the client socket from pausing the loop until it receives data
             if state.payload == "Choose":   # Displays the game but doesn't allow them to pick a card
                 while True:
-                    print(player_number)
+                    
                     interface.game_screen.display(player_number, state.game)
 
                     try:
                         msg = net.receive()   # When a player has made a move you receive data
+                        
                         if msg == "Executed" or "None":
                             break   # To return to the main loop
-                        elif msg == "Confirm" or msg.game:
-                            # Keeps on looping while the current player is asked to confirm their choice
-                            pass
+                       
                     except:
                         pass    # Stops the loop from pausing
 
