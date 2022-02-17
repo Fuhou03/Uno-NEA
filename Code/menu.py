@@ -233,11 +233,11 @@ class GameMode(Menu):
 
 
 class Image:
-    def __init__(self, image):
+    def __init__(self, image, **kw):
         self.image = image
         self.x = None
         self.y = None
-        self.rect = None
+        self.colour = kw.get("colour")
 
 class GameScreen(Menu):
     def __init__(self, interface):
@@ -251,10 +251,10 @@ class GameScreen(Menu):
         self.back_image = pygame.transform.scale(self.b_img, (self.b_img.get_width() * 0.22,
                                                               self.b_img.get_height() * 0.22))
 
-        self.red_diamond = pygame.image.load(Images().red_diamond).convert_alpha()
-        self.blue_diamond = pygame.image.load(Images().blue_diamond).convert_alpha()
-        self.green_diamond = pygame.image.load(Images().green_diamond).convert_alpha()
-        self.yellow_diamond = pygame.image.load(Images().yellow_diamond).convert_alpha()
+        self.red_d = pygame.image.load(Images().red_diamond).convert_alpha()
+        self.blue_d = pygame.image.load(Images().blue_diamond).convert_alpha()
+        self.green_d = pygame.image.load(Images().green_diamond).convert_alpha()
+        self.yellow_d = pygame.image.load(Images().yellow_diamond).convert_alpha()
 
         self.draw_button = Button(self.MID_W - 100, self.MID_H + 185, 200, 60)
         self.draw_text = self.text_font.render("Draw", True, (255, 255, 255))
@@ -273,6 +273,9 @@ class GameScreen(Menu):
         self.action = None
         self.player_id = None
         self.game = None
+        self.colour_cursor = None
+        self.new_colour = None
+        self.choosing_colour = False
 
         self.image_list = []
         self.image_list_length = 7
@@ -299,6 +302,83 @@ class GameScreen(Menu):
         self.offset = 0
         self.opponent_x_offset = -480
         self.opponent_y_offset = -340
+
+    def move_cursor(self):
+        """ Move the cursor rectangle left or right to select a card, or up and down to press the 'Draw' button """
+        if self.interface.LEFT_KEY and not self.draw_button.active:     # If they pressed left or right
+            if self.cursor_rect.x == self.image_list[0].x:  # If they press left while on the 1st card
+                self.cursor_rect.x = self.image_list[-1].x   # Move cursor to the last card
+            else:  # If the cursor is not on the left-most image
+                self.cursor_rect.x -= 90    # Moves the cursor rectangle
+
+        elif self.interface.RIGHT_KEY and not self.draw_button.active:
+            if self.cursor_rect.x == self.image_list[-1].x:  # If the cursor is on the left-most card
+                self.cursor_rect.x = self.image_list[0].x   # Move it onto the 1st card
+            else:
+                self.cursor_rect.x += 90
+
+        elif self.interface.UP_KEY and not self.draw_button.active:
+            self.draw_button.colour = self.draw_button.colour_active
+            self.draw_button.active = True
+            self.cursor_rect.y += 1000  # Move it out of the screen
+
+        elif self.interface.DOWN_KEY and self.draw_button.active:
+            self.cursor_rect.y -= 1000  # Bring it back onto screen
+            self.draw_button.active = False
+            self.draw_button.colour = self.draw_button.colour_passive
+
+    def check_input(self):
+        """ Checks if they have pressed a key and performs the necessary actions """
+        self.move_cursor()
+
+        if self.interface.ENTER_KEY and not self.draw_button.active:
+            for image in self.image_list:
+                if self.cursor_rect.x == image.x:   # If the cursor overlaps with the image's rectangle
+                    card_index = self.image_list.index(image)   # The pos of the chosen card in the image list and deck
+                    self.choose_card(card_index)    # Uses the index to check if that card in the deck is valid
+
+                    if self.interface.card_chosen:
+                        self.deck.pop(card_index)   # So the card doesn't get displayed among your deck
+                        self.display(self.player_id, self.game)  # One last time before the loop in the client ends
+                        self.chosen_card = None     # Reset
+
+                    else:   # The card they pick does not match in colour or value
+                        pass    # They are prompted to choose another card
+
+        elif self.interface.ENTER_KEY and self.draw_button.active:
+            self.action = DrawCard()    # To tell the server after that the player wants to draw a card
+            self.interface.card_chosen = True   # Stops the loop in the client
+
+            self.draw_button.active = False     # Resetting it
+            self.draw_button.colour = self.draw_button.colour_passive
+            self.cursor_rect.y -= 1000
+
+    def choose_card(self, choice):
+        """ Checks if your chosen card is valid and adds your selected card into an action object """
+        # Add the draw card option
+
+        current_player = self.game.player_list[self.player_id]
+
+        if current_player.deck[choice].colour == None:   # If they chose a wildcard (it has no colour)
+            self.choosing_colour = True
+            self.reset_keys()
+            while self.choosing_colour:     # Lets the user select the next colour
+                self.choose_colour()
+
+            self.action = PlaceCard(choice, colour=self.new_colour)  # Colour is an optional parameter
+            self.interface.card_chosen = True
+            self.chosen_card = self.image_list[choice].image
+            self.new_colour = None  # Reset
+
+        elif (current_player.deck[choice].colour == self.game.discard_pile[-1].colour) or \
+                (current_player.deck[choice].value == self.game.discard_pile[-1].value):  # Not valid
+            self.action = PlaceCard(choice)
+            self.interface.card_chosen = True
+            self.chosen_card = self.image_list[choice].image    # The image of the chosen card
+
+
+
+        # else: # Prompt to choose another card
 
     def display(self, player_id, game):
         """ Displays all the cards onto the screen and allows you to select a card if it's your turn """
@@ -338,7 +418,7 @@ class GameScreen(Menu):
         total_image_width = (self.image_list[0].image.get_width() * len(self.image_list)) -\
                             ((self.image_list[0].image.get_width() - 90) * len(self.image_list))
 
-        if len(self.image_list) != self.image_list_length:
+        if len(self.image_list) != self.image_list_length:  # A card was placed down or drawn
             self.image_list_length = len(self.image_list)    # Used to adjust the cursor rect coordinates
             self.number_of_cards_changed = True
 
@@ -346,16 +426,17 @@ class GameScreen(Menu):
         for img in self.image_list:   # Go through the Image objects in the image_list and set their co-ordinates
             # Blit your cards   # self.offset is 0 initially then is incremented each time so the cards overlap
 
+            # You cannot get an image's co-ordinates so I assigned their co-ordinates to an attribute to use them later
             img.x = self.MID_W - (total_image_width / 2) + self.offset
             img.y = self.MID_H + 270  # Assign values to the Image object's x and y attributes
             self.interface.screen.blit(img.image, (img.x, img.y))
 
-            img.rect = img.image.get_rect(topleft=(img.x, img.y))  # Create a rect of the same size as the image
+            #img.rect = img.image.get_rect(topleft=(img.x, img.y))  # Create a rect of the same size as the image
             self.offset += 90
 
 
         # Put the chosen card in the centre of screen
-        if self.chosen_card:
+        if self.chosen_card:    # Display in the center the card you placed down
             self.interface.screen.blit(self.chosen_card, (self.MID_W - self.chosen_card.get_width() / 2,
                                                           self.MID_H - 20 - self.chosen_card.get_height() / 2))
         else:   # Blit the card at the top of the discard pile in the centre
@@ -400,82 +481,11 @@ class GameScreen(Menu):
         self.reset_offsets()
         self.image_list = []    # Reset it since the user may have drawn or placed down a card
 
-    def move_cursor(self):
-        """ Move the cursor rectangle left or right to select a card, or up and down to press the 'Draw' button """
-        if self.interface.LEFT_KEY and not self.draw_button.active:     # If they pressed left or right
-            if self.cursor_rect.x == self.image_list[0].x:  # If they press left while on the 1st card
-                self.cursor_rect.x = self.image_list[-1].x   # Move cursor to the last card
-            else:  # If the cursor is not on the left-most image
-                self.cursor_rect.x -= 90    # Moves the cursor rectangle
-
-        elif self.interface.RIGHT_KEY and not self.draw_button.active:      # image_list[-1].rect.x? V
-            if self.cursor_rect.x == self.image_list[-1].x:  # If the cursor is on the left-most card
-                self.cursor_rect.x = self.image_list[0].x   # Move it onto the 1st card
-            else:
-                self.cursor_rect.x += 90
-
-        elif self.interface.UP_KEY and not self.draw_button.active:
-            self.draw_button.colour = self.draw_button.colour_active
-            self.draw_button.active = True
-            self.cursor_rect.y += 1000  # Move it out of the screen
-
-        elif self.interface.DOWN_KEY and self.draw_button.active:
-            self.cursor_rect.y -= 1000  # Bring it back onto screen
-            self.draw_button.active = False
-            self.draw_button.colour = self.draw_button.colour_passive
-
-    def check_input(self):
-        """ Checks if they have pressed a key and performs the necessary actions """
-        self.move_cursor()
-
-        if self.interface.ENTER_KEY and not self.draw_button.active:
-            for image in self.image_list:   # == image.rect.x ?
-                if self.cursor_rect.x == image.x:   # If the cursor overlaps with the image's rectangle
-                    card_index = self.image_list.index(image)   # The pos of the chosen card in the image list and deck
-                    self.choose_card(card_index)    # Uses the index to check if that card in the deck is valid
-
-                    if self.interface.card_chosen:
-                        self.deck.pop(card_index)   # So the card doesn't get displayed among your deck
-                        self.display(self.player_id, self.game)  # One last time before the loop in the client ends
-                        self.chosen_card = None     # Reset
-
-                    else:   # The card they pick does not match in colour or value
-                        pass    # They are prompted to choose another card
-
-        elif self.interface.ENTER_KEY and self.draw_button.active:
-            self.action = DrawCard()    # To tell the server after that the player wants to draw a card
-            self.interface.card_chosen = True   # Stops the loop in the client
-
-            self.draw_button.active = False     # Resetting it
-            self.draw_button.colour = self.draw_button.colour_passive
-            self.cursor_rect.y -= 1000
-
-
-    def choose_card(self, choice):
-        """ Checks if your chosen card is valid and adds your selected card into an action object """
-        # Add the draw card option
-
-        current_player = self.game.player_list[self.player_id]
-
-        if (current_player.deck[choice].colour == self.game.discard_pile[-1].colour) or \
-                (current_player.deck[choice].value == self.game.discard_pile[-1].value):  # Not valid
-            self.action = PlaceCard(choice)
-            self.interface.card_chosen = True
-            self.chosen_card = self.image_list[choice].image    # The image of the chosen card
-
-        elif not current_player.deck[choice].colour:   # wildcard
-            new_colour = input("Choose a colour for the next player: ")
-            self.action = PlaceCard(choice, colour=new_colour)  # Colour is an optional parameter
-            self.interface.card_chosen = True
-            self.chosen_card = self.image_list[choice].image
-
-        # else: # Prompt to choose another card
-
     def ask(self, game):
         """ Asks the user if they want to place their drawn card down """
         self.interface.screen.fill((0, 100, 255))
         self.interface.check_events()
-        #cursor disappeared after selecting card + didn't display the card that was picked up
+
         ask_text = self.button_font.render("Place The Card Down?", True, (255, 255, 255))
         self.interface.screen.blit(ask_text, (self.MID_W - ask_text.get_width() / 2, self.MID_H - 400))
 
@@ -512,8 +522,68 @@ class GameScreen(Menu):
         self.reset_keys()
 
     def choose_colour(self):
-        self.interface.screen.fill((0, 0, 0))
+        self.interface.screen.fill((pygame.Color("cornflowerblue")))
         self.interface.check_events()
+        font = pygame.font.Font(None, 80)
+
+        choose_text = font.render("Choose A Colour", True, (255, 255, 255))
+        self.interface.screen.blit(choose_text, (self.MID_W - choose_text.get_width() / 2, self.MID_H - 300))
+
+        # Creating an image object for each diamond and assigning their images and co-ordinates to attributes
+        red_diamond = Image(pygame.transform.scale(self.red_d, (self.red_d.get_width() * 0.6,
+                                                                self.red_d.get_height() * 0.6)), colour="red")
+        diamond_width = red_diamond.image.get_width()
+        red_diamond.x, red_diamond.y = self.MID_W - (75 + diamond_width * 2), self.MID_H - diamond_width / 2
+
+        blue_diamond = Image(pygame.transform.scale(self.blue_d, (self.blue_d.get_width() * 0.6,
+                                                                  self.blue_d.get_height() * 0.6)), colour="blue")
+        blue_diamond.x, blue_diamond.y = self.MID_W - (25 + diamond_width), self.MID_H - diamond_width / 2
+
+        green_diamond = Image(pygame.transform.scale(self.green_d, (self.green_d.get_width() * 0.6,
+                                                                    self.green_d.get_height() * 0.6)), colour="green")
+        green_diamond.x, green_diamond.y = self.MID_W + 25, self.MID_H - diamond_width / 2
+
+        yellow_diamond = Image(pygame.transform.scale(self.yellow_d, (self.yellow_d.get_width() * 0.6,
+                                                                      self.yellow_d.get_height() * 0.6)), colour="yellow")
+        yellow_diamond.x, yellow_diamond.y = self.MID_W + 75 + diamond_width, self.MID_H - diamond_width / 2
+
+        diamond_list = [red_diamond, blue_diamond, green_diamond, yellow_diamond]
+
+        #C = self.button_font.render("CT", True, (255,255,255))
+        #self.interface.screen.blit(C, (self.MID_W - C.get_width() / 2, self.MID_H - C.get_height() / 2))
+
+        for diamond in diamond_list:    # Blit all 4 diamonds
+            self.interface.screen.blit(diamond.image, (diamond.x, diamond.y))
+
+        if not self.colour_cursor: # If hasn't been drawn yet
+            self.colour_cursor = red_diamond.image.get_rect(topleft=(self.MID_W - (75 + diamond_width * 2),
+                                                                     self.MID_H - diamond_width / 2))
+
+        if self.interface.LEFT_KEY:
+            if self.colour_cursor.x == diamond_list[0].x:   # Move cursor from the left side to the right
+                self.colour_cursor.x = diamond_list[-1].x
+            else:
+                self.colour_cursor.x -= (50 + diamond_width)
+
+        elif self.interface.RIGHT_KEY:
+            if self.colour_cursor.x == diamond_list[-1].x:   # Move cursor from the right side to the left
+                self.colour_cursor.x = diamond_list[0].x
+            else:
+                self.colour_cursor.x += (50 + diamond_width)
+
+        elif self.interface.ENTER_KEY:
+            for diamond in diamond_list:
+                if self.colour_cursor.x == diamond.x:     # Find the selected diamond
+                    self.new_colour = diamond.colour
+                    self.choosing_colour = False
+
+        pygame.draw.rect(self.interface.screen, pygame.Color("gray25"), self.colour_cursor, 3)
+
+        self.interface.clock.tick(60)
+        self.reset_keys()
+        pygame.display.update()
+
+
 
 
 
