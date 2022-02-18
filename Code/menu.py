@@ -365,6 +365,7 @@ class GameScreen(Menu):
             while self.choosing_colour:     # Lets the user select the next colour
                 self.choose_colour()
 
+            # Display the chosen colour
             self.action = PlaceCard(choice, colour=self.new_colour)  # Colour is an optional parameter
             self.interface.card_chosen = True
             self.chosen_card = self.image_list[choice].image
@@ -397,11 +398,11 @@ class GameScreen(Menu):
         self.draw_button.draw_rect(self.interface.screen)   # Put draw button and text onto screen
         self.interface.screen.blit(self.draw_text, (self.MID_W - self.draw_text.get_width() / 2, self.MID_H + 205))
 
-        RIGHT_ID = self.player_id - 1   # The player id's of the opponents
-        if RIGHT_ID == -1:  # So it doesn't print -1
-            RIGHT_ID = len(self.game.player_list) - 1   # The final player in the list
+        LEFT_ID = self.player_id - 1   # The player id's of the opponents
+        if LEFT_ID == -1:  # So it doesn't print -1
+            LEFT_ID = len(self.game.player_list) - 1   # The final player in the list
 
-        LEFT_ID = (self.player_id + 1) % len(self.game.player_list)     # % To get the 1st index when needed
+        RIGHT_ID = (self.player_id + 1) % len(self.game.player_list)     # % To get the 1st index when needed
         # e.g In 3 player mode, if it's player 2, the left becomes player 0: (2+1) % 3 = 0
 
         id_text = self.button_font.render("P" + str(self.player_id), True, (255, 255, 255))
@@ -435,6 +436,20 @@ class GameScreen(Menu):
             self.offset += 90
 
 
+        # Display the direction
+        clockwise = pygame.image.load(Images().clockwise).convert_alpha()
+        clockwise_img = pygame.transform.scale(clockwise, (clockwise.get_width() * 0.2, clockwise.get_height() * 0.2))
+
+        anticlockwise = pygame.image.load(Images().anticlockwise).convert_alpha()
+        anticlockwise_img = pygame.transform.scale(anticlockwise, (anticlockwise.get_width() * 0.45,
+                                                                   anticlockwise.get_height() * 0.45))
+
+        if self.game.direction == "clockwise":
+            self.interface.screen.blit(clockwise_img, (self.MID_W - clockwise_img.get_width() / 2, self.MID_H - 335))
+        else:
+            self.interface.screen.blit(anticlockwise_img, (self.MID_W - anticlockwise_img.get_width() / 2,
+                                                           self.MID_H - 360))
+
         # Put the chosen card in the centre of screen
         if self.chosen_card:    # Display in the center the card you placed down
             self.interface.screen.blit(self.chosen_card, (self.MID_W - self.chosen_card.get_width() / 2,
@@ -445,6 +460,12 @@ class GameScreen(Menu):
             top_card_img = top_card.image  # Get the image from that card
             self.interface.screen.blit(top_card_img, (self.MID_W - top_card_img.get_width() / 2,
                                                       self.MID_H - top_card_img.get_height() / 2))
+
+        if self.game.discard_pile[-1].value == "wild" or self.game.discard_pile[-1].value == "wild 4":
+            # If a player put a wildcard down, display the colour chosen for the next player
+            colour_text = self.button_font.render("Colour Chosen: " + self.game.discard_pile[-1].colour,
+                                                  True, (255, 255, 255))
+            self.interface.screen.blit(colour_text, (self.MID_W - colour_text.get_width() / 2, self.MID_H - 350))
 
         # Displaying the opponent's cards faced down
         for i in range(0, len(left_opponent.deck)):
