@@ -20,7 +20,6 @@ class Uno:
         self.dk = Deck()
 
     def add_player(self, player_id):
-        #self.connected += 1     # Used to detect if 3 players have joined - then the game can begin
         self.player_list.append(Player(player_id))    # Create new player
 
     def change_direction(self):
@@ -52,27 +51,30 @@ class Uno:
             for i in range(2):  # next_turn is called so you get the index of the next player
                 self.player_list[self.next_turn()].deck = self.dk.draw_card(self.player_list[self.next_turn()].deck)
 
-            print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
+            #print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
 
             for i in range(2): # Turn increments twice so it skips the next player
                 self.turn = self.next_turn()
 
         elif self.discard_pile[-1].value == "skip":
-            print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
+            #print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
 
             for i in range(2):
                 self.turn = self.next_turn()
 
         elif self.discard_pile[-1].value == "reverse":
-            print(f"\nPlayer {self.player_list[self.next_turn()].id}'s turn is skipped.") # Printed before the reverse
+            #print(f"\nPlayer {self.player_list[self.next_turn()].id}'s turn is skipped.") # Printed before the reverse
             self.change_direction()
             self.turn = self.next_turn()
+
+            if self.game_mode == 2:     # Reverse acts as a skip card in 2 player mode
+                self.turn = self.next_turn()    # Returns back to you
 
         elif self.discard_pile[-1].value == "wild 4":
             for i in range(4):  # Next player draws 4 cards
                 self.player_list[self.next_turn()].deck = self.dk.draw_card(self.player_list[self.next_turn()].deck)
 
-            print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
+            #print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
 
             for i in range(2):
                 self.turn = self.next_turn()
@@ -81,7 +83,6 @@ class Uno:
             self.turn = self.next_turn()
 
         if len(self.player_list[self.turn].deck) == 0:
-            print(f"Player {self.player_list[self.turn].id} has won! The game has completed.")
             self.finished = True
 
     def set_up(self):
