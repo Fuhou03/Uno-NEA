@@ -268,16 +268,18 @@ class GameScreen(Menu):
         self.no_button = Button(self.MID_W - 400, self.MID_H + 100, 300, 80)
         self.no_text = self.button_font.render("No", True, (255, 255, 255))
 
-        self.chosen_card = None     # Assigned later
-        self.deck = None
+        self.deck = None        # Assigned later
         self.action = None
         self.player_id = None
         self.game = None
         self.colour_cursor = None
         self.new_colour = None
         self.choosing_colour = False
+
         self.left_opponent = None
         self.right_opponent = None
+        self.top_opponent = None
+        self.TOP_ID = None
 
         self.image_list = []
         self.image_list_length = 7
@@ -303,7 +305,7 @@ class GameScreen(Menu):
         """ To display the cards in the correct position in the next loop of the while loop """
         self.offset = 0
         self.opponent_x_offset = -480
-        self.opponent_y_offset = -340
+        self.opponent_y_offset = -320
 
     def move_cursor(self):
         """ Move the cursor rectangle left or right to select a card, or up and down to press the 'Draw' button """
@@ -341,8 +343,6 @@ class GameScreen(Menu):
 
                     if self.interface.card_chosen:
                         self.deck.pop(card_index)   # So the card doesn't get displayed among your deck
-                        self.display(self.player_id, self.game)  # One last time before the loop in the client ends
-                        self.chosen_card = None     # Reset
 
                     else:   # The card they pick does not match in colour or value
                         pass    # They are prompted to choose another card
@@ -359,6 +359,7 @@ class GameScreen(Menu):
     def display_direction(self):
         """ Display the direction image onto screen """
         # Display the direction
+        self.game.direction = "clockwise"
         clockwise = pygame.image.load(Images().clockwise).convert_alpha()
         clockwise_img = pygame.transform.scale(clockwise, (clockwise.get_width() * 0.2, clockwise.get_height() * 0.2))
 
@@ -366,73 +367,108 @@ class GameScreen(Menu):
         anticlockwise_img = pygame.transform.scale(anticlockwise, (anticlockwise.get_width() * 0.45,
                                                                    anticlockwise.get_height() * 0.45))
 
+        CW_X, ACW_X = self.MID_W - clockwise_img.get_width() / 2, self.MID_W - anticlockwise_img.get_width() / 2
+        CW_Y, ACW_Y = self.MID_H - clockwise_img.get_height() / 2, self.MID_H - anticlockwise_img.get_height() / 2
+
+        if self.TOP_ID != None:     # 2 or 4 player mode
+            CW_X += 200
+            ACW_X += 200
+        else:   # The direction arrow image is in a different position for 3 player mode
+            CW_Y -= 220
+            ACW_Y -= 220
+
         if self.game.direction == "clockwise":
-            self.interface.screen.blit(clockwise_img, (self.MID_W - clockwise_img.get_width() / 2, self.MID_H - 310))
+            self.interface.screen.blit(clockwise_img, (CW_X, CW_Y))
         else:
-            self.interface.screen.blit(anticlockwise_img, (self.MID_W - anticlockwise_img.get_width() / 2,
-                                                           self.MID_H - 340))
+            self.interface.screen.blit(anticlockwise_img, (ACW_X, ACW_Y))
 
     def display_player_info(self):
         """ Display the current player and the player number of each player """
-
         turn_text = self.button_font.render("Current Turn: P" + str(self.game.turn), True, (255, 255, 255))
-        self.interface.screen.blit(turn_text, (self.MID_W - turn_text.get_width() / 2, self.MID_H - 400))
 
-        LEFT_ID = self.player_id - 1   # The player id's of the opponents
-        if LEFT_ID == -1:  # So it doesn't print -1
-            LEFT_ID = len(self.game.player_list) - 1   # The final player in the list
+        my_id_text = self.button_font.render("P" + str(self.player_id), True, (255, 255, 255))
+        self.interface.screen.blit(my_id_text, (self.MID_W - my_id_text.get_width() / 2, self.MID_H + 125))
 
-        RIGHT_ID = (self.player_id + 1) % len(self.game.player_list)     # % To get the 1st index when needed
-        # e.g In 3 player mode, if it's player 2, the left becomes player 0: (2+1) % 3 = 0
+        if self.game.game_mode == 2:
+            self.TOP_ID = (self.player_id + 1) % len(self.game.player_list)  # Either 0 or 1
 
-        self.left_opponent = self.game.player_list[LEFT_ID]
-        self.right_opponent = self.game.player_list[RIGHT_ID]
+        else:
+            if self.game.game_mode == 4:    # E.g. The top player will be P1 if you're P3, or P2 if you're P4
+                self.TOP_ID = self.game.player_list.index(self.game.player_list[self.player_id - 2])
 
-        id_text = self.button_font.render("P" + str(self.player_id), True, (255, 255, 255))
-        right_text = self.button_font.render("P" + str(RIGHT_ID), True, (255, 255, 255))
-        left_text = self.button_font.render("P" + str(LEFT_ID), True, (255, 255, 255))
-        self.interface.screen.blit(id_text, (self.MID_W - id_text.get_width() / 2, self.MID_H + 125))
-        self.interface.screen.blit(right_text, (self.MID_W - 460, self.MID_H - 400))
-        self.interface.screen.blit(left_text, (self.MID_W + 420, self.MID_H - 400))
+            # The player id's of the opponents
+            LEFT_ID = (self.player_id + 1) % len(self.game.player_list)     # % To get the 1st index when needed
+            # e.g In 3 player mode, if it's player 2, the left becomes player 0: (2+1) % 3 = 0
+
+            # If you are P0 the right opponent will be P2 instead of P -1 (no -ve index)
+            RIGHT_ID = self.game.player_list.index(self.game.player_list[self.player_id - 1])
+
+            self.left_opponent = self.game.player_list[LEFT_ID]
+            self.right_opponent = self.game.player_list[RIGHT_ID]
+
+            right_text = self.button_font.render("P" + str(RIGHT_ID), True, (255, 255, 255))
+            left_text = self.button_font.render("P" + str(LEFT_ID), True, (255, 255, 255))
+
+            self.interface.screen.blit(right_text, (self.MID_W + 410, self.MID_H - 380))
+            self.interface.screen.blit(left_text, (self.MID_W - 460, self.MID_H - 380))
+
+        if self.TOP_ID != None:  # If it's game mode 2 or 4 then there is a player at the top
+            self.top_opponent = self.game.player_list[self.TOP_ID]
+            top_text = self.button_font.render("P" + str(self.TOP_ID), True, (255,255,255))
+            self.interface.screen.blit(top_text, (self.MID_W - top_text.get_width() / 2, self.MID_H - 380))
+
+            self.interface.screen.blit(turn_text, (self.MID_W - turn_text.get_width() / 2, self.MID_H - 480))
+        else:
+            self.interface.screen.blit(turn_text, (self.MID_W - turn_text.get_width() / 2, self.MID_H - 380))
 
         # If a player put a wildcard down, display the colour that was chosen for the next player
         if self.game.discard_pile[-1].value == "wild" or self.game.discard_pile[-1].value == "wild 4":
             colour_text = self.text_font.render("Colour Chosen: " + self.game.discard_pile[-1].colour,
                                                   True, (255, 255, 255))
-            self.interface.screen.blit(colour_text, (self.MID_W - colour_text.get_width() / 2, self.MID_H - 350))
+            if self.TOP_ID != None:
+                self.interface.screen.blit(colour_text, (self.MID_W - colour_text.get_width() / 2, self.MID_H - 440))
+            else:
+                self.interface.screen.blit(colour_text, (self.MID_W - colour_text.get_width() / 2, self.MID_H - 340))
 
     def display_center_card(self):
-        if self.chosen_card:    # Display in the center the card that you placed down
-            self.interface.screen.blit(self.chosen_card, (self.MID_W - self.chosen_card.get_width() / 2,
-                                                          self.MID_H - 20 - self.chosen_card.get_height() / 2))
-
-        else:   # Blit the card at the top of the discard pile in the centre if you haven't chosen a card yet
-            top_card = Image(self.scale_image(self.game.discard_pile[-1]))  # Create an image object
-            top_card_img = top_card.image  # Get the image from that card
-            self.interface.screen.blit(top_card_img, (self.MID_W - top_card_img.get_width() / 2,
-                                                      self.MID_H - top_card_img.get_height() / 2))
+        top_card = Image(self.scale_image(self.game.discard_pile[-1]))  # Create an image object
+        top_card_img = top_card.image  # Get the image from that card
+        self.interface.screen.blit(top_card_img, (self.MID_W - top_card_img.get_width() / 2,
+                                                  self.MID_H - top_card_img.get_height() / 2))
 
     def display_opponents_cards(self):
         """ Displaying the opponent's cards faced down """
-        for i in range(0, len(self.left_opponent.deck)):
-            self.interface.screen.blit(self.back_image,
-                                       (self.MID_W + self.opponent_x_offset, self.MID_H + self.opponent_y_offset))
-            self.opponent_y_offset += 60    # So the cards move downwards
 
-        self.reset_offsets()    # Reset it for the other opponent
-        self.opponent_x_offset = 480 - self.back_image.get_width()    # To blit the cards of the opponent on the right
+        if self.game.game_mode != 2:
+            for i in range(0, len(self.left_opponent.deck)):
+                self.interface.screen.blit(self.back_image,
+                                           (self.MID_W + self.opponent_x_offset, self.MID_H + self.opponent_y_offset))
+                self.opponent_y_offset += 60    # So the cards move downwards
 
-        for j in range(0, len(self.right_opponent.deck)):
-            self.interface.screen.blit(self.back_image, (self.MID_W + self.opponent_x_offset,
-                                                         self.MID_H + self.opponent_y_offset))
-            self.opponent_y_offset += 60    # So the cards move downwards
+            self.reset_offsets()    # Reset it for the other opponent
+            self.opponent_x_offset = 480 - self.back_image.get_width()    # To blit the cards of the opponent on the right
+
+            for j in range(0, len(self.right_opponent.deck)):
+                self.interface.screen.blit(self.back_image, (self.MID_W + self.opponent_x_offset,
+                                                             self.MID_H + self.opponent_y_offset))
+                self.opponent_y_offset += 60    # So the cards move downwards
+
+        if self.game.game_mode == 2 or self.game.game_mode == 4:
+            image_width = self.back_image.get_width() * len(self.top_opponent.deck) - \
+                          ((self.back_image.get_width() - 60) * len(self.top_opponent.deck))
+
+            top_offset = 0
+            for i in range(0, len(self.top_opponent.deck)):
+                self.interface.screen.blit(self.back_image,
+                                           ((self.MID_W - image_width / 2) + top_offset, self.MID_H - 320))
+                top_offset += 60
 
     def display_your_cards(self):
         """ Displaying your cards on the screen """
         # The length from the left side of your first card to the right side of your last card (To keep them centered)
+
         self.total_image_width = (self.image_list[0].image.get_width() * len(self.image_list)) - \
                                  ((self.image_list[0].image.get_width() - 90) * len(self.image_list))
-
         for img in self.image_list:   # Go through the Image objects in the image_list and set their co-ordinates
             # Blit your cards   # self.offset is 0 initially then is incremented each time so the cards overlap
             # You cannot get an image's co-ordinates so I assigned their co-ordinates to an attribute to use them later
@@ -449,13 +485,11 @@ class GameScreen(Menu):
         self.interface.screen.fill((0, 100, 255))
         self.interface.check_events()   # Check for key presses
 
-        self.display_direction()
-        self.display_player_info()
-
-        if not self.chosen_card:    # Stops the self.deck from being overwritten
-            self.deck = self.game.player_list[self.player_id].deck
-
+        self.deck = self.game.player_list[self.player_id].deck
         self.create_images()    # Getting images for every card in your deck
+
+        self.display_player_info()
+        self.display_direction()
 
         if len(self.image_list) != self.image_list_length:  # A card was placed down or drawn
             self.image_list_length = len(self.image_list)    # Used to adjust the cursor rect coordinates
@@ -468,10 +502,8 @@ class GameScreen(Menu):
         self.draw_button.draw_rect(self.interface.screen)   # Put draw button and text onto screen
         self.interface.screen.blit(self.draw_text, (self.MID_W - self.draw_text.get_width() / 2, self.MID_H + 205))
 
-
-
         # Allows them to select a card if it's their turn
-        if self.game.turn == self.player_id and not self.chosen_card:
+        if self.game.turn == self.player_id:
             # Draw the cursor rectangle; 2 blits the border only
             if not self.cursor_rect or self.number_of_cards_changed:    # Create the rectangle
                 self.cursor_rect = self.image_list[0].image.get_rect(topleft=(self.MID_W - (self.total_image_width / 2),
@@ -505,14 +537,12 @@ class GameScreen(Menu):
             # Display the chosen colour
             self.action = PlaceCard(choice, colour=self.new_colour)  # Colour is an optional parameter
             self.interface.card_chosen = True
-            self.chosen_card = self.image_list[choice].image
             self.new_colour = None  # Reset
 
         elif (current_player.deck[choice].colour == self.game.discard_pile[-1].colour) or \
-                (current_player.deck[choice].value == self.game.discard_pile[-1].value):  # Not valid
+                (current_player.deck[choice].value == self.game.discard_pile[-1].value):  # If they chose any other card
             self.action = PlaceCard(choice)
             self.interface.card_chosen = True
-            self.chosen_card = self.image_list[choice].image    # The image of the chosen card
 
         # else: # Prompt to choose another card
 
@@ -564,7 +594,7 @@ class GameScreen(Menu):
         choose_text = font.render("Choose A Colour", True, (255, 255, 255))
         self.interface.screen.blit(choose_text, (self.MID_W - choose_text.get_width() / 2, self.MID_H - 300))
 
-        # Creating an image object for each diamond and assigning their images and co-ordinates to attributes
+        # Create an image object for each diamond and assign their images and co-ordinates to attributes
         red_diamond = Image(pygame.transform.scale(self.red_d, (self.red_d.get_width() * 0.6,
                                                                 self.red_d.get_height() * 0.6)), colour="red")
         diamond_width = red_diamond.image.get_width()
@@ -592,20 +622,20 @@ class GameScreen(Menu):
                                                                      self.MID_H - diamond_width / 2))
 
         if self.interface.LEFT_KEY:
-            if self.colour_cursor.x == diamond_list[0].x:   # Move cursor from the left side to the right
-                self.colour_cursor.x = diamond_list[-1].x
+            if self.colour_cursor.x == diamond_list[0].x:
+                self.colour_cursor.x = diamond_list[-1].x   # Move cursor from the left side to the right
             else:
                 self.colour_cursor.x -= (50 + diamond_width)
 
         elif self.interface.RIGHT_KEY:
-            if self.colour_cursor.x == diamond_list[-1].x:   # Move cursor from the right side to the left
-                self.colour_cursor.x = diamond_list[0].x
+            if self.colour_cursor.x == diamond_list[-1].x:
+                self.colour_cursor.x = diamond_list[0].x    # Move cursor from the right side to the left
             else:
                 self.colour_cursor.x += (50 + diamond_width)
 
         elif self.interface.ENTER_KEY:
             for diamond in diamond_list:
-                if self.colour_cursor.x == diamond.x:     # Find the selected diamond
+                if self.colour_cursor.x == diamond.x:     # Find the selected colour
                     self.new_colour = diamond.colour
                     self.choosing_colour = False
 
