@@ -85,18 +85,17 @@ def play_game(game, con_list):
 
 
 games = {}  # Dictionary to store the game id along with the corresponding game object
-
 conn_list = []
-game_id = 1
 
+game_id = 1
 player_id = 0
 
-games[game_id] = Uno()  # Creating the first game
+games[game_id] = Uno()  # Creating a game for the first group of players
 
-game_mode_dict = dict{}
-game_mode_dict["two_player"] = []
-game_mode_dict["three_player"] = []
-game_mode_dict["four_player"] = []
+game_mode_dict = {}
+game_mode_dict[2] = []
+game_mode_dict[3] = []
+game_mode_dict[4] = []
 
 while True:
     connection, addr = server.accept()
@@ -105,25 +104,17 @@ while True:
 
     game_mode = pickle.loads(connection.recv(2048*2))     # Receive game mode choice
 
-    if game_mode == 2:      # Adds the connection of the player into a list depending on their choice
-        game_mode_dict["two_player"].append(connection)
+    # Adds the connection of the player into a list depending on their choice
+    game_mode_dict[game_mode].append(connection)
 
-    elif game_mode == 3:
-        game_mode_dict["three_player"].append(connection)
-
-    else:
-        game_mode_dict["four_player"].append(connection)
-
-    for game_mode in game_mode_dict:   # Create a new thread for every new game
-
-        if (game_mode == "two_player" and len(game_mode_dict[game_mode]) == 2) or \
-                (game_mode == "three_player" and len(game_mode_dict[game_mode]) == 3) or \
-                (game_mode == "four_player" and len(game_mode_dict[game_mode]) == 4):   # If all players have connected
+    for game_mode in game_mode_dict:   # To begin the game when enough players have chosen that game mode
+        if len(game_mode_dict[game_mode]) == game_mode:     # E.g If 3 players have chosen Three Player mode
 
             for i in range(0, len(game_mode_dict[game_mode])):
-                games[game_id].add_player(i)    # Create the required no. of players inside the game
+                games[game_id].add_player(i)    # Create the players inside the game
 
-            games[game_id].start_game(len(game_mode_dict[game_mode]))  # Choosing the correct game mode
+            games[game_id].start_game(len(game_mode_dict[game_mode]))
+            # Tells the game object which game mode was selected
 
             thread = threading.Thread(target=play_game, args=(games[game_id], game_mode_dict[game_mode]))
             thread.start()  # Each game will play in their own thread so multiple games can play at the same time
@@ -131,9 +122,6 @@ while True:
             game_mode_dict[game_mode] = []  # Clear the list so new players can also play that game mode
             game_id += 1    # So the next game created has a different game_id
             games[game_id] = Uno()    # Create a new game for the next players
-
-    print(f"{threading.active_count() = } \n")
-    game_mode = None
 
 
 
