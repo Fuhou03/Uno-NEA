@@ -5,9 +5,12 @@ from game import Uno
 from actions import Response
 import time
 
-ip = socket.gethostbyname(socket.gethostname())  # my IPv4 Address
-port = 5555
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ip = socket.gethostbyname(socket.gethostname())  # my IPv4 Address
+#ip = ""     # Binds to the server
+
+port = 5555
+
 ADDR = (ip, port)
 
 print("Server is starting")
@@ -27,61 +30,61 @@ def close_connection(connections):
         time.sleep(0.1)
 
 
-def play_game(game, con_list):
-    conn_list = con_list
+def play_game(game, conn_list):
     for num in range(0, len(conn_list)):  # To get the connections of each client
         conn_list[num].sendall(pickle.dumps("Started"))  # To let all players know that the game has begun
-        time.sleep(0.05)
+        time.sleep(0.05)    # Doesn't work unless I add a short delay here
         conn_list[num].sendall(pickle.dumps(num))  # To let the player know which number they are
         time.sleep(0.1)     # Short delay stops data being sent to wrong client
 
     running = True
     confirming = False
+    data = None
 
     while running:
         if not confirming:  # If it's waiting for the player to confirm their choice it doesn't send anything
             for conn in conn_list:
                 response = Response(game, "Choose")     # So the client selects a card if it's their turn
                 conn.sendall(pickle.dumps(response))     # Sending the game and payload to the client
-                print(f"Sent data to {conn_list.index(conn)}")
                 time.sleep(0.1)
 
-        try:
+        try:    # Could add a timer here
             data = pickle.loads(conn_list[game.turn].recv(2048*3))  # Receiving data from the current player
+
         except Exception as e:
             print(e)
             print("A player has left so the game will stop.")
             close_connection(conn_list)
             running = False
 
-        confirming = False  # Reset it in case a player was asked to confirm their choice before
-        response = data.execute(game)   # Calls the execute method of the action
-        # E.g. Executing the PlaceCard action removes the card from the player's deck and adds it to the discard pile
+        else:
+            confirming = False  # Reset it in case a player was asked to confirm their choice before
+            response = data.execute(game)   # Calls the execute method of the action
+            # E.g Executing the PlaceCard action removes the card from the player's deck and adds it to the discard pile
 
-        if response.payload == "Executed":  # If they placed a card down
-            # Checks which card was selected and performs the action
-            response.game.compare_card()    # E.g Draw 2 skips the next player and deals them 2 cards
+            if response.payload == "Executed":  # If they placed a card down
+                # Checks which card was selected and performs the action
+                response.game.compare_card()    # E.g Draw 2 skips the next player and deals them 2 cards
 
-            if game.finished:   # Player placed down their final card
-                close_connection(conn_list)
-                running = False
+                if game.finished:   # Player placed down their final card
+                    close_connection(conn_list)
+                    running = False
 
-        elif response.payload == "Confirm":   # If the player drew a card they'll be asked if they want to place it down
-            confirming = True   # So the server doesn't ask the client to choose another card until they've confirmed
+            elif response.payload == "Confirm":   # If the player drew a card they'll be asked if they want to place it down
+                confirming = True   # So the server doesn't ask the client to choose another card until they've confirmed
 
-        game = response.game    # Update the game so the updated version is sent to all players
+            game = response.game    # Update the game so the updated version is sent to all players
 
-        if not confirming:
-            for conn in conn_list:
-                conn.sendall(pickle.dumps(response.payload)) # So all clients receive the response below at the same time
-                time.sleep(0.05)
-                conn.sendall(pickle.dumps(response))   # Send the game back to all clients
+            if not confirming:
+                for conn in conn_list:
+                    conn.sendall(pickle.dumps(response.payload)) # So all clients receive the response below at the same time
+                    conn.sendall(pickle.dumps(response))   # Send the game back to all clients
+                    time.sleep(0.1)
+
+            else:   # When confirming with the current player it only sends data to them so that the other players will wait
+                conn_list[game.turn].sendall(pickle.dumps(response.payload))
+                conn_list[game.turn].sendall(pickle.dumps(response))
                 time.sleep(0.1)
-        else:   # When confirming with the current player it only sends data to them so that the other players will wait
-            conn_list[game.turn].sendall(pickle.dumps(response.payload))
-            conn_list[game.turn].sendall(pickle.dumps(response))
-
-        time.sleep(0.1)
 
 
 games = {}  # Dictionary to store the game id along with the corresponding game object
@@ -103,6 +106,7 @@ while True:
     print(f"{game_id = }")
 
     game_mode = pickle.loads(connection.recv(2048*2))     # Receive game mode choice
+    print(f"{game_mode = }")
 
     # Adds the connection of the player into a list depending on their choice
     game_mode_dict[game_mode].append(connection)
@@ -122,6 +126,7 @@ while True:
             game_mode_dict[game_mode] = []  # Clear the list so new players can also play that game mode
             game_id += 1    # So the next game created has a different game_id
             games[game_id] = Uno()    # Create a new game for the next players
+
 
 
 
