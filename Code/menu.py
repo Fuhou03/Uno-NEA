@@ -107,13 +107,13 @@ class Options(Menu):
         super().__init__(interface)
 
         self.volume_label = self.button_font.render("Volume", True, (255, 255, 255))
-        self.volume_button = Button(self.MID_W - 400, self.MID_H + 120, 240, 70)
+        self.volume_button = Button(self.MID_W - 400, self.MID_H - 135, 240, 70)
 
         self.music_label = self.button_font.render("Music", True, (255, 255, 255))
-        self.music_button = Button(self.MID_W - 400, self.MID_H, 240, 70)
+        self.music_button = Button(self.MID_W - 400, self.MID_H - 35, 240, 70)
 
         self.sound_label = self.button_font.render("Sound", True, (255, 255, 255))
-        self.sound_button = Button(self.MID_W - 400, self.MID_H - 120, 240, 70)
+        self.sound_button = Button(self.MID_W - 400, self.MID_H + 65, 240, 70)
 
         self.button_list = [self.volume_button, self.music_button, self.sound_button]
 
@@ -122,21 +122,27 @@ class Options(Menu):
         self.run_display = True
         while self.run_display:
             self.interface.screen.fill((0,0,0))
-            self.interface.screen.blit(self.volume_label, (self.MID_W - 350, self.MID_H - 100))
-            self.interface.screen.blit(self.music_label, (self.MID_W - 345, self.MID_H + 20))
-            self.interface.screen.blit(self.sound_label, (self.MID_W - 345, self.MID_H + 140))
+            self.interface.screen.blit(self.volume_label,
+                                       (self.volume_button.rect.centerx - self.volume_label.get_width() / 2,
+                                        self.volume_button.rect.centery - self.volume_label.get_height() / 2))
+            self.interface.screen.blit(self.music_label,
+                                       (self.music_button.rect.centerx - self.music_label.get_width() / 2,
+                                        self.music_button.rect.centery - self.music_label.get_height() / 2))
+            self.interface.screen.blit(self.sound_label,
+                                       (self.sound_button.rect.centerx - self.sound_label.get_width() / 2,
+                                        self.sound_button.rect.centery - self.sound_label.get_height() / 2))
+
+            for b in self.button_list:
+                b.draw_rect(self.interface.screen)
 
             self.blit_description()
 
             self.interface.check_events()
             self.check_input()
-            for b in self.button_list:
-                b.draw_rect(self.interface.screen)
+
             pygame.display.update()
             self.interface.clock.tick(60)   # 60 fps
             self.reset_keys()
-
-
 
     def check_input(self):   # Create sliders or options later
         if self.interface.BACK_KEY:
@@ -257,7 +263,8 @@ class GameScreen(Menu):
         self.yellow_d = pygame.image.load(Images().yellow_diamond).convert_alpha()
 
         self.draw_button = Button(self.MID_W - 100, self.MID_H + 185, 200, 60)
-        self.draw_text = self.text_font.render("Draw", True, (255, 255, 255))
+        self.draw_text = self.text_font.render("Draw", True, (0, 0, 0)) #
+        self.uno_button = Button(self.MID_W - 180, self.MID_H - 20, 100, 40)
 
         self.confirm = False
         self.ask_cursor = Button(self.MID_W + 100, self.MID_H + 100, 300, 80)
@@ -276,6 +283,7 @@ class GameScreen(Menu):
         self.new_colour = None
         self.choosing_colour = False
         self.invalid = False
+        self.pressed_uno = False
 
         self.left_opponent = None
         self.right_opponent = None
@@ -328,15 +336,15 @@ class GameScreen(Menu):
 
     def display_player_info(self):
         """ Display the current player and the player number of each player """
-        turn_text = self.button_font.render("Current Turn: P" + str(self.game.turn), True, (255, 255, 255))
+        turn_text = self.button_font.render("Current Turn: P" + str(self.game.turn), True, (0, 0, 0))
 
-        my_id_text = self.button_font.render("P" + str(self.player_id), True, (255, 255, 255))
+        my_id_text = self.button_font.render("P" + str(self.player_id), True, (0, 0, 0))
         self.interface.screen.blit(my_id_text, (self.MID_W - my_id_text.get_width() / 2, self.MID_H + 125))
 
         if self.game.game_mode == 2:
             self.TOP_ID = (self.player_id + 1) % len(self.game.player_list)  # Either 0 or 1
 
-        else:
+        else:   # Only game mode 3 and 4 have players on the left and right
             if self.game.game_mode == 4:    # E.g. The top player will be P1 if you're P3, or P2 if you're P4
                 self.TOP_ID = self.game.player_list.index(self.game.player_list[self.player_id - 2])
 
@@ -350,15 +358,15 @@ class GameScreen(Menu):
             self.left_opponent = self.game.player_list[LEFT_ID]
             self.right_opponent = self.game.player_list[RIGHT_ID]
 
-            right_text = self.button_font.render("P" + str(RIGHT_ID), True, (255, 255, 255))
-            left_text = self.button_font.render("P" + str(LEFT_ID), True, (255, 255, 255))
+            right_text = self.button_font.render("P" + str(RIGHT_ID), True, (0, 0, 0))
+            left_text = self.button_font.render("P" + str(LEFT_ID), True, (0, 0, 0))
 
             self.interface.screen.blit(right_text, (self.MID_W + 410, self.MID_H - 380))
             self.interface.screen.blit(left_text, (self.MID_W - 460, self.MID_H - 380))
 
         if self.TOP_ID != None:  # If it's game mode 2 or 4 then there is a player at the top
             self.top_opponent = self.game.player_list[self.TOP_ID]
-            top_text = self.button_font.render("P" + str(self.TOP_ID), True, (255,255,255))
+            top_text = self.button_font.render("P" + str(self.TOP_ID), True, (0, 0, 0))
             self.interface.screen.blit(top_text, (self.MID_W - top_text.get_width() / 2, self.MID_H - 380))
 
             self.interface.screen.blit(turn_text, (self.MID_W - turn_text.get_width() / 2, self.MID_H - 480))
@@ -368,7 +376,7 @@ class GameScreen(Menu):
         # If a player put a wildcard down, display the colour that was chosen for the next player
         if self.game.discard_pile[-1].value == "wild" or self.game.discard_pile[-1].value == "wild 4":
             colour_text = self.text_font.render("Colour Chosen: " + self.game.discard_pile[-1].colour,
-                                                  True, (255, 255, 255))
+                                                  True, (0, 0, 0))
             if self.TOP_ID != None:     # 2/4 P Mode uses different coordinates
                 self.interface.screen.blit(colour_text, (self.MID_W - colour_text.get_width() / 2, self.MID_H - 430))
             else:
@@ -390,7 +398,7 @@ class GameScreen(Menu):
     def display_opponents_cards(self):
         """ Displaying the opponent's cards faced down """
 
-        if self.game.game_mode != 2:
+        if self.game.game_mode != 2:    # Only game mode 3 and 4 has players on the left and right side
             for i in range(0, len(self.left_opponent.deck)):
                 self.interface.screen.blit(self.back_image,
                                            (self.MID_W + self.opponent_x_offset, self.MID_H + self.opponent_y_offset))
@@ -404,7 +412,7 @@ class GameScreen(Menu):
                                                              self.MID_H + self.opponent_y_offset))
                 self.opponent_y_offset += 50    # So the cards move downwards
 
-        if self.game.game_mode == 2 or self.game.game_mode == 4:
+        if self.game.game_mode == 2 or self.game.game_mode == 4:    # Only game mode 2 and 4 have player at the top
             image_width = self.back_image.get_width() * len(self.top_opponent.deck) - \
                           ((self.back_image.get_width() - 60) * len(self.top_opponent.deck))
 
@@ -416,10 +424,11 @@ class GameScreen(Menu):
 
     def display_your_cards(self):
         """ Displaying your cards on the screen """
-        # The length from the left side of your first card to the right side of your last card (To keep them centered)
 
+        # The width from the left side of your first card to the right side of your last card (To keep them centered)
         self.total_image_width = (self.image_list[0].image.get_width() * len(self.image_list)) - \
                                  ((self.image_list[0].image.get_width() - 90) * len(self.image_list))
+
         for img in self.image_list:   # Go through the Image objects in the image_list and set their co-ordinates
             # Blit your cards   # self.offset is 0 initially then is incremented each time so the cards overlap
             # You cannot get an image's co-ordinates so I assigned their co-ordinates to an attribute to use them later
@@ -433,7 +442,12 @@ class GameScreen(Menu):
         """ Displays all the cards onto the screen and allows you to select a card if it's your turn """
         self.player_id = player_id
         self.game = game
-        self.interface.screen.fill((0, 100, 255))
+
+        self.interface.screen.fill(pygame.Color("darkorange"))
+        #self.interface.screen.fill((0, 85, 255))    #(0, 100, 255)
+
+        #chocolate1  #cyan3 #dodgerblue #lightgoldenrod
+
         self.interface.check_events()   # Check for key presses
 
         self.deck = self.game.player_list[self.player_id].deck
@@ -449,6 +463,7 @@ class GameScreen(Menu):
         self.display_opponents_cards()
         self.display_your_cards()
         self.display_center_card()
+        self.display_uno()
 
         self.draw_button.draw_rect(self.interface.screen)   # Put draw button and text onto screen
         self.interface.screen.blit(self.draw_text, (self.MID_W - self.draw_text.get_width() / 2, self.MID_H + 205))
@@ -469,13 +484,28 @@ class GameScreen(Menu):
                 self.interface.screen.blit(invalid_text, (self.MID_W - invalid_text.get_width() / 2, self.MID_H - 130))
 
         else:   # If it's not their turn, they cannot perform any actions as there is no cursor rectangle
-            pass
+            pass # Check if player pressed uno button
 
         self.interface.clock.tick(60)   # 60 fps
         pygame.display.update()
         self.reset_keys()   # Allows the user to press another key
         self.reset_offsets()
         self.image_list = []    # Reset it since the user may have drawn or placed down a card
+
+        #if len(self.game.player_list[self.player_id].deck) == 1:    # You have 1 card remaining
+
+    def display_uno(self):
+        self.uno_button.draw_rect(self.interface.screen)
+
+        uno_font = pygame.font.Font(None, 20)
+        uno_text = uno_font.render("Uno", True, (0, 0, 0))
+        self.interface.screen.blit(uno_text, (self.uno_button.rect.centerx - uno_text.get_width() / 2,
+                                              self.uno_button.rect.centery - uno_text.get_height() / 2))
+
+        if self.game.pressed_uno is not None:   # A player pressed the uno button
+            uno_player_text = self.button_font.render(f"P{str(self.game.pressed_uno[0])} said Uno!", True, (0, 0, 0))
+            self.interface.screen.blit(uno_player_text, (self.MID_W + 250, self.MID_H - 480))
+
 
     def choose_card(self, choice):
         """ Checks if your chosen card is valid and adds your selected card into an action object """
@@ -502,35 +532,51 @@ class GameScreen(Menu):
         else:   # The card they pick does not match in colour or value
             self.invalid = True     # They will be asked to choose another card
 
+        if self.pressed_uno:
+            self.action.pressed_uno = True
+            self.pressed_uno = False
+
     def move_cursor(self):
-        """ Move the cursor rectangle left or right to select a card, or up and down to press the 'Draw' button """
-        if self.interface.LEFT_KEY and not self.draw_button.active:     # If they pressed left or right
+        """ Move the cursor rectangle left or right to select a card, or up and down to press the other buttons """
+        if self.interface.LEFT_KEY and not self.draw_button.active and not self.uno_button.active:     # If they pressed left or right
             if self.cursor_rect.x == self.image_list[0].x:  # If they press left while on the 1st card
                 self.cursor_rect.x = self.image_list[-1].x   # Move cursor to the last card
             else:  # If the cursor is not on the left-most image
                 self.cursor_rect.x -= 90    # Moves the cursor rectangle
 
-        elif self.interface.RIGHT_KEY and not self.draw_button.active:
+        elif self.interface.RIGHT_KEY and not self.draw_button.active and not self.uno_button.active:
             if self.cursor_rect.x == self.image_list[-1].x:  # If the cursor is on the left-most card
                 self.cursor_rect.x = self.image_list[0].x   # Move it onto the 1st card
             else:
                 self.cursor_rect.x += 90
 
-        elif self.interface.UP_KEY and not self.draw_button.active:
+        if self.interface.UP_KEY and not self.draw_button.active and not self.uno_button.active:
             self.draw_button.colour = self.draw_button.colour_active
             self.draw_button.active = True
             self.cursor_rect.y += 1000  # Move it out of the screen
 
-        elif self.interface.DOWN_KEY and self.draw_button.active:
+        elif self.interface.UP_KEY and self.draw_button.active:
+            self.uno_button.colour = self.uno_button.colour_active
+            self.uno_button.active = True
+            self.draw_button.colour = self.draw_button.colour_passive
+            self.draw_button.active = False
+
+        if self.interface.DOWN_KEY and self.draw_button.active:
             self.cursor_rect.y -= 1000  # Bring it back onto screen
             self.draw_button.active = False
             self.draw_button.colour = self.draw_button.colour_passive
+
+        elif self.interface.DOWN_KEY and self.uno_button.active:
+            self.uno_button.colour = self.uno_button.colour_passive
+            self.uno_button.active = False
+            self.draw_button.colour = self.draw_button.colour_active
+            self.draw_button.active = True
 
     def check_input(self):
         """ Checks if they have pressed a key and performs the necessary actions """
         self.move_cursor()
 
-        if self.interface.ENTER_KEY and not self.draw_button.active:
+        if self.interface.ENTER_KEY and not self.draw_button.active and not self.uno_button.active:   # They chose a card
             for image in self.image_list:
                 if self.cursor_rect.x == image.x:   # If the cursor overlaps with the image's rectangle
                     card_index = self.image_list.index(image)   # The pos of the chosen card in the image list and deck
@@ -540,6 +586,14 @@ class GameScreen(Menu):
                         self.invalid = False
                         self.deck.pop(card_index)   # So the card doesn't get displayed among your deck
 
+
+        elif self.interface.ENTER_KEY and self.uno_button.active:
+            self.pressed_uno = True
+
+            self.uno_button.active = False     # Resetting it
+            self.uno_button.colour = self.uno_button.colour_passive
+            self.cursor_rect.y -= 1000
+
         elif self.interface.ENTER_KEY and self.draw_button.active:
             self.action = DrawCard()    # To tell the server after that the player wants to draw a card
             self.interface.card_chosen = True   # Stops the loop in the client
@@ -547,6 +601,7 @@ class GameScreen(Menu):
             self.draw_button.active = False     # Resetting it
             self.draw_button.colour = self.draw_button.colour_passive
             self.cursor_rect.y -= 1000
+
 
 
     def ask(self, game):
@@ -648,6 +703,25 @@ class GameScreen(Menu):
         self.reset_keys()
         pygame.display.update()
 
+    def finished_screen(self, game):
+
+        x = 0
+        while x != 500:     # So the window closes after the screen is displayed for a short amount of time
+            self.interface.screen.fill((0, 85, 255))
+            self.interface.check_events()
+
+            finished_text = self.button_font.render("The game has finished!", True, (255, 255, 255))
+            winner_text = self.button_font.render("The winner is P" + str(game.winner), True, (255, 255, 255))
+
+            self.interface.screen.blit(finished_text, (self.MID_W - finished_text.get_width() / 2, self.MID_H - 300))
+            self.interface.screen.blit(winner_text, (self.MID_W - winner_text.get_width() / 2, self.MID_H - 200))
+
+
+            self.interface.clock.tick(60)
+            pygame.display.update()
+            x += 1
+
+        pygame.quit()
 
 
 
