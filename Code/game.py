@@ -1,5 +1,6 @@
 from deck import Deck
 
+
 class Player:
     def __init__(self, id):
         self.deck = []
@@ -12,7 +13,9 @@ class Uno:
         self.turn = 0
 
         self.game_mode = None
+        self.winner = None
         self.finished = False
+        self.pressed_uno = None
 
         self.player_list = []
         self.discard_pile = []
@@ -45,6 +48,7 @@ class Uno:
 
     def compare_card(self):
         # self.player_list[self.next_turn()] is the next player
+        current_turn = self.turn    # Used to check if the player has placed the final card down (as self.turn changes)
 
         if self.discard_pile[-1].value == "draw 2":
             # Next player draws 2 and their turn is skipped
@@ -82,8 +86,11 @@ class Uno:
         else:  # Normal numbered card placed down
             self.turn = self.next_turn()
 
-        if len(self.player_list[self.turn].deck) == 0:
+        if len(self.player_list[current_turn].deck) == 0:  # If a player has placed all their cards down
             self.finished = True
+            self.winner = current_turn
+
+
 
     def set_up(self):
         """ Give each player 7 cards and add the card at the top of the deck to the discard pile """
