@@ -18,6 +18,8 @@ class Menu:
         self.back_desc = self.text_font.render("Backspace To Return", True, (255, 255, 255))
         self.arrow_desc = self.text_font.render("Arrows To Navigate", True, (255, 255, 255))
 
+        self.menu_sound = pygame.mixer.Sound("Sounds\menu sound.wav")
+
     def reset_keys(self):       # Every menu can use this method
         self.interface.ENTER_KEY = False
         self.interface.BACK_KEY = False
@@ -51,6 +53,8 @@ class MainMenu(Menu):
 
         self.button_list = [self.play_button, self.option_button, self.cursor]
 
+
+
     def display(self):
         """ Displays the text and buttons and checks if they pressed a key """
         self.run_display = True
@@ -81,10 +85,12 @@ class MainMenu(Menu):
         if self.interface.DOWN_KEY:     # If they pressed the Down arrow key
             if self.cursor.rect.y != self.option_button.rect.y:     # Stops the cursor from moving above/below button
                 self.cursor.rect.y += 160   # Moves the cursor up and down
+                pygame.mixer.Sound.play(self.menu_sound)
 
         elif self.interface.UP_KEY:
             if self.cursor.rect.y != self.play_button.rect.y:
                 self.cursor.rect.y -= 160
+                pygame.mixer.Sound.play(self.menu_sound)
 
     def check_input(self):
         """ Checks if they pressed a key """
@@ -171,6 +177,8 @@ class GameMode(Menu):
 
         self.button_list = [self.two_player_button, self.three_player_button, self.four_player_button, self.cursor]
 
+        self.start_sound = pygame.mixer.Sound("Sounds\start sound.ogg")
+
     def display(self):
         self.run_display = True
         while self.run_display:
@@ -198,10 +206,12 @@ class GameMode(Menu):
         if self.interface.DOWN_KEY:
             if self.cursor.rect.y != self.four_player_button.rect.y:     # Stops the cursor from moving away from buttons
                 self.cursor.rect.y += 120
+                pygame.mixer.Sound.play(self.menu_sound)
 
         if self.interface.UP_KEY:
             if self.cursor.rect.y != self.two_player_button.rect.y:
                 self.cursor.rect.y -= 120
+                pygame.mixer.Sound.play(self.menu_sound)
 
 
     def check_input(self):
@@ -221,10 +231,12 @@ class GameMode(Menu):
                         self.interface.game_mode_choice = 4
 
                     self.run_display = False
+                    pygame.mixer.Sound.play(self.start_sound)
 
         elif self.interface.BACK_KEY:   # Goes back to the main menu
             self.interface.current_screen = self.interface.main_menu
             self.run_display = False
+            pygame.mixer.Sound.play(self.menu_sound)
 
     def waiting_screen(self):
         """ This is displayed while you wait for other players to join """
@@ -264,7 +276,7 @@ class GameScreen(Menu):
 
         self.draw_button = Button(self.MID_W - 100, self.MID_H + 185, 200, 60)
         self.draw_text = self.text_font.render("Draw", True, (0, 0, 0)) #
-        self.uno_button = Button(self.MID_W - 180, self.MID_H - 20, 100, 40)
+        self.uno_button = Button(self.MID_W - 180, self.MID_H - 30, 70, 60)
 
         self.confirm = False
         self.ask_cursor = Button(self.MID_W + 100, self.MID_H + 100, 300, 80)
@@ -275,15 +287,26 @@ class GameScreen(Menu):
         self.no_button = Button(self.MID_W - 400, self.MID_H + 100, 300, 80)
         self.no_text = self.button_font.render("No", True, (255, 255, 255))
 
+        self.place_card_sound = pygame.mixer.Sound("Sounds\place card.wav")
+        self.invalid_card_sound = pygame.mixer.Sound("Sounds\invalid card.wav")
+        self.button_sound = pygame.mixer.Sound("Sounds\pressed button.wav")
+
+        #self.skip_sound = pygame.mixer.Sound("Sounds\skip sound.wav")
+        #self.wild_4_sound = pygame.mixer.Sound("Sounds\wild 4 sound.mp3")
+        self.finished_sound = pygame.mixer.Sound("Sounds\game_over.wav")
+
         self.deck = None        # Assigned later
         self.action = None
         self.player_id = None
         self.game = None
+
         self.colour_cursor = None
         self.new_colour = None
         self.choosing_colour = False
+
         self.invalid = False
         self.pressed_uno = False
+        self.played_sound = False
 
         self.left_opponent = None
         self.right_opponent = None
@@ -322,7 +345,7 @@ class GameScreen(Menu):
         CW_X, ACW_X = self.MID_W - clockwise_img.get_width() / 2, self.MID_W - anticlockwise_img.get_width() / 2
         CW_Y, ACW_Y = self.MID_H - clockwise_img.get_height() / 2, self.MID_H - anticlockwise_img.get_height() / 2
 
-        if self.TOP_ID != None:     # 2 or 4 player mode
+        if self.TOP_ID is not None:     # 2 or 4 player mode
             CW_X += 200
             ACW_X += 200
         else:   # The direction arrow image is in a different position for 3 player mode
@@ -364,7 +387,7 @@ class GameScreen(Menu):
             self.interface.screen.blit(right_text, (self.MID_W + 410, self.MID_H - 380))
             self.interface.screen.blit(left_text, (self.MID_W - 460, self.MID_H - 380))
 
-        if self.TOP_ID != None:  # If it's game mode 2 or 4 then there is a player at the top
+        if self.TOP_ID is not None:  # If it's game mode 2 or 4 then there is a player at the top
             self.top_opponent = self.game.player_list[self.TOP_ID]
             top_text = self.button_font.render("P" + str(self.TOP_ID), True, (0, 0, 0))
             self.interface.screen.blit(top_text, (self.MID_W - top_text.get_width() / 2, self.MID_H - 380))
@@ -377,7 +400,7 @@ class GameScreen(Menu):
         if self.game.discard_pile[-1].value == "wild" or self.game.discard_pile[-1].value == "wild 4":
             colour_text = self.text_font.render("Colour Chosen: " + self.game.discard_pile[-1].colour,
                                                   True, (0, 0, 0))
-            if self.TOP_ID != None:     # 2/4 P Mode uses different coordinates
+            if self.TOP_ID is not None:     # 2/4 P Mode uses different coordinates
                 self.interface.screen.blit(colour_text, (self.MID_W - colour_text.get_width() / 2, self.MID_H - 430))
             else:
                 self.interface.screen.blit(colour_text, (self.MID_W - colour_text.get_width() / 2, self.MID_H - 335))
@@ -484,7 +507,7 @@ class GameScreen(Menu):
                 self.interface.screen.blit(invalid_text, (self.MID_W - invalid_text.get_width() / 2, self.MID_H - 130))
 
         else:   # If it's not their turn, they cannot perform any actions as there is no cursor rectangle
-            pass # Check if player pressed uno button
+            pass
 
         self.interface.clock.tick(60)   # 60 fps
         pygame.display.update()
@@ -492,28 +515,50 @@ class GameScreen(Menu):
         self.reset_offsets()
         self.image_list = []    # Reset it since the user may have drawn or placed down a card
 
-        #if len(self.game.player_list[self.player_id].deck) == 1:    # You have 1 card remaining
+    def check_input(self):
+        """ Checks if they have pressed a key and performs the necessary actions """
+        self.move_cursor()
 
-    def display_uno(self):
-        self.uno_button.draw_rect(self.interface.screen)
+        if self.interface.ENTER_KEY and not self.draw_button.active and not self.uno_button.active:  # They chose a card
+            for image in self.image_list:
+                if self.cursor_rect.x == image.x:   # If the cursor overlaps with the image's rectangle
+                    card_index = self.image_list.index(image)   # The pos of the chosen card in the image list and deck
+                    self.choose_card(card_index)    # Uses the index to check if that card in the deck is valid
 
-        uno_font = pygame.font.Font(None, 20)
-        uno_text = uno_font.render("Uno", True, (0, 0, 0))
-        self.interface.screen.blit(uno_text, (self.uno_button.rect.centerx - uno_text.get_width() / 2,
-                                              self.uno_button.rect.centery - uno_text.get_height() / 2))
+                    if self.interface.card_chosen:  # They chose a valid card
+                        self.invalid = False
+                        self.deck.pop(card_index)   # So the card doesn't get displayed among your deck
+                        pygame.mixer.Sound.play(self.place_card_sound)
+                    else:   # The card they picked was invalid
+                        pygame.mixer.Sound.play(self.invalid_card_sound)
 
-        if self.game.pressed_uno is not None:   # A player pressed the uno button
-            uno_player_text = self.button_font.render(f"P{str(self.game.pressed_uno[0])} said Uno!", True, (0, 0, 0))
-            self.interface.screen.blit(uno_player_text, (self.MID_W + 250, self.MID_H - 480))
+        elif self.interface.ENTER_KEY and self.uno_button.active:   # The user pressed the uno button
+            pygame.mixer.Sound.play(self.button_sound)
+            self.pressed_uno = True
+
+            self.uno_button.active = False     # Resetting it
+            self.uno_button.colour = self.uno_button.colour_passive
+            self.cursor_rect.y -= 1000
+
+        elif self.interface.ENTER_KEY and self.draw_button.active:  # The user chose to Draw a card
+            pygame.mixer.Sound.play(self.button_sound)
+            self.action = DrawCard()    # To tell the server after that the player wants to draw a card
+            self.interface.card_chosen = True   # Stops the loop in the client
+
+            self.draw_button.active = False     # Resetting it
+            self.draw_button.colour = self.draw_button.colour_passive
+            self.cursor_rect.y -= 1000
+
+        self.played_sound = False   # Reset it so the can sound play again next turn
 
 
     def choose_card(self, choice):
-        """ Checks if your chosen card is valid and adds your selected card into an action object """
-        # Add the draw card option
+        """ Checks if your chosen card is valid and adds your selected card into an action object which will be sent
+        to the server """
 
         current_player = self.game.player_list[self.player_id]
 
-        if current_player.deck[choice].colour == None:   # If they chose a wildcard (it has no colour)
+        if current_player.deck[choice].colour is None:   # If they chose a wildcard (it has no colour)
             self.choosing_colour = True
             self.reset_keys()
             while self.choosing_colour:     # Lets the user select the next colour
@@ -572,38 +617,6 @@ class GameScreen(Menu):
             self.draw_button.colour = self.draw_button.colour_active
             self.draw_button.active = True
 
-    def check_input(self):
-        """ Checks if they have pressed a key and performs the necessary actions """
-        self.move_cursor()
-
-        if self.interface.ENTER_KEY and not self.draw_button.active and not self.uno_button.active:   # They chose a card
-            for image in self.image_list:
-                if self.cursor_rect.x == image.x:   # If the cursor overlaps with the image's rectangle
-                    card_index = self.image_list.index(image)   # The pos of the chosen card in the image list and deck
-                    self.choose_card(card_index)    # Uses the index to check if that card in the deck is valid
-
-                    if self.interface.card_chosen:
-                        self.invalid = False
-                        self.deck.pop(card_index)   # So the card doesn't get displayed among your deck
-
-
-        elif self.interface.ENTER_KEY and self.uno_button.active:
-            self.pressed_uno = True
-
-            self.uno_button.active = False     # Resetting it
-            self.uno_button.colour = self.uno_button.colour_passive
-            self.cursor_rect.y -= 1000
-
-        elif self.interface.ENTER_KEY and self.draw_button.active:
-            self.action = DrawCard()    # To tell the server after that the player wants to draw a card
-            self.interface.card_chosen = True   # Stops the loop in the client
-
-            self.draw_button.active = False     # Resetting it
-            self.draw_button.colour = self.draw_button.colour_passive
-            self.cursor_rect.y -= 1000
-
-
-
     def ask(self, game):
         """ Asks the user if they want to place their drawn card down """
         self.interface.screen.fill((0, 100, 255))
@@ -615,7 +628,6 @@ class GameScreen(Menu):
         your_player = game.player_list[self.player_id]
         picked_up_card = self.scale_image(your_player.deck[-1])   # The card you just picked up is at index -1
         self.interface.screen.blit(picked_up_card, (self.MID_W - picked_up_card.get_width() / 2, self.MID_H - 200))
-        # display the picked up card, add text for choosing colour, create new colour cursor
 
         self.interface.screen.blit(self.yes_text, (self.MID_W + 215,    # Drawing the text and buttons onto screen
                                                    self.MID_H + 125))
@@ -692,6 +704,8 @@ class GameScreen(Menu):
                 self.colour_cursor.x += (50 + diamond_width)
 
         elif self.interface.ENTER_KEY:  # If they selected a colour
+            pygame.mixer.Sound.play(self.button_sound)
+
             for diamond in diamond_list:
                 if self.colour_cursor.x == diamond.x:     # Find the selected colour
                     self.new_colour = diamond.colour
@@ -703,9 +717,25 @@ class GameScreen(Menu):
         self.reset_keys()
         pygame.display.update()
 
-    def finished_screen(self, game):
+    def display_uno(self):
+        self.uno_button.draw_rect(self.interface.screen)
 
+        uno_font = pygame.font.Font(None, 30)
+        uno_text = uno_font.render("Uno", True, (0, 0, 0))
+        self.interface.screen.blit(uno_text, (self.uno_button.rect.centerx - uno_text.get_width() / 2,
+                                              self.uno_button.rect.centery - uno_text.get_height() / 2))
+
+        if self.game.pressed_uno is not False:   # A player pressed the uno button
+            uno_player_text = self.button_font.render(f"P{str(self.game.pressed_uno)} said Uno!", True, (0, 0, 0))
+            self.interface.screen.blit(uno_player_text, (self.MID_W + 250, self.MID_H - 480))
+
+        elif self.game.forgot_player is not False:    # A player forgot to press the uno button
+            forgot_text = self.button_font.render(f"P{str(self.game.forgot_player)} didn't say Uno!", True, (0, 0, 0))
+            self.interface.screen.blit(forgot_text, (self.MID_W + 250, self.MID_H - 480))
+
+    def finished_screen(self, game):
         x = 0
+        pygame.mixer.Sound.play(self.finished_sound)
         while x != 500:     # So the window closes after the screen is displayed for a short amount of time
             self.interface.screen.fill((0, 85, 255))
             self.interface.check_events()
@@ -715,7 +745,6 @@ class GameScreen(Menu):
 
             self.interface.screen.blit(finished_text, (self.MID_W - finished_text.get_width() / 2, self.MID_H - 300))
             self.interface.screen.blit(winner_text, (self.MID_W - winner_text.get_width() / 2, self.MID_H - 200))
-
 
             self.interface.clock.tick(60)
             pygame.display.update()
