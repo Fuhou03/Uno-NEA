@@ -15,7 +15,9 @@ class Uno:
         self.game_mode = None
         self.winner = None
         self.finished = False
-        self.pressed_uno = None
+
+        self.pressed_uno = False    # This is assigned the ID of the player that pressed the Uno button later
+        self.forgot_player = False  # This is assigned the ID of the player that forgot to press Uno
 
         self.player_list = []
         self.discard_pile = []
@@ -46,6 +48,12 @@ class Uno:
 
         return next_turn
 
+    def draw_card(self, player_deck):
+        """ When player chooses to draw a card """
+        player_deck.append(self.dk.deck[0])
+        self.dk.deck.pop(0)
+
+
     def compare_card(self):
         # self.player_list[self.next_turn()] is the next player
         current_turn = self.turn    # Used to check if the player has placed the final card down (as self.turn changes)
@@ -53,7 +61,7 @@ class Uno:
         if self.discard_pile[-1].value == "draw 2":
             # Next player draws 2 and their turn is skipped
             for i in range(2):  # next_turn is called so you get the index of the next player
-                self.player_list[self.next_turn()].deck = self.dk.draw_card(self.player_list[self.next_turn()].deck)
+                self.draw_card(self.player_list[self.next_turn()].deck)
 
             #print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
 
@@ -76,8 +84,8 @@ class Uno:
 
         elif self.discard_pile[-1].value == "wild 4":
             for i in range(4):  # Next player draws 4 cards
-                self.player_list[self.next_turn()].deck = self.dk.draw_card(self.player_list[self.next_turn()].deck)
 
+                self.draw_card(self.player_list[self.next_turn()].deck)
             #print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
 
             for i in range(2):
@@ -89,7 +97,15 @@ class Uno:
         if len(self.player_list[current_turn].deck) == 0:  # If a player has placed all their cards down
             self.finished = True
             self.winner = current_turn
+        elif len(self.player_list[current_turn].deck) == 1:     # If they have 1 card remaining
+            self.check_for_uno()
 
+    def check_for_uno(self):
+        """ Checks if the player remembered to say Uno before putting down his 2nd to last card """
+
+        if self.forgot_player is not False:     # They forgot
+            for i in range(4):  # They must draw 4 cards
+                self.draw_card(self.player_list[self.forgot_player].deck)
 
 
     def set_up(self):
@@ -101,7 +117,7 @@ class Uno:
             player.deck = self.dk.deal_cards(player.deck)    # Give the players 7 cards
 
         for i in range(0, len(self.dk.deck)): # So the game doesn't start with a wild card
-            if self.dk.deck[i].colour != None:
+            if self.dk.deck[i].colour is not None:
                 self.discard_pile.append(self.dk.deck[i]) # Card at the top of the deck is placed down first (index 0)
                 break
 
