@@ -1,5 +1,29 @@
-from network import Network
+import socket
+import pickle
 from interface import Interface
+
+
+class Network:
+    def __init__(self):
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.ip = socket.gethostbyname(socket.gethostname())
+        #self.ip = "178.79.144.126"
+
+        self.port = 5555
+
+        self.addr = (self.ip, self.port)
+        self.client.connect(self.addr)
+
+    def send(self, data):
+        try:
+            self.client.sendall(pickle.dumps(data))  # Sends data to the server
+
+        except socket.error as e:
+            print(e)
+
+    def receive(self):
+        return pickle.loads(self.client.recv(2048*3))
+        # pickle.loads to de-serialize the data which is in bytes format, and return the reconstructed object
 
 
 def main():
