@@ -131,7 +131,11 @@ class Options(Menu):
         self.run_display = True
         while self.run_display:
             self.interface.screen.fill((0, 0, 0))
+
             self.menu_sound.set_volume(self.interface.volume)
+            if self.sound.active:
+                self.interface.volume = 0
+
             self.interface.check_events()
             self.check_input()
 
@@ -175,16 +179,19 @@ class Options(Menu):
                                                                         self.MID_W - 130):
             pygame.mixer.Sound.play(self.menu_sound)
             self.volume_circle_x -= 50
-            self.volume -= 0.1
-            self.interface.volume = self.volume
+            self.volume -= 0.1      # Decrease the volume
 
+            if not self.sound.active:   # Only changes the volume if the player has enabled the sound
+                self.interface.volume = self.volume
 
         elif self.interface.RIGHT_KEY and self.volume_slider.active and (self.MID_W + self.volume_circle_x !=
                                                                          self.MID_W + 370):
             pygame.mixer.Sound.play(self.menu_sound)
             self.volume_circle_x += 50
-            self.volume += 0.1
-            self.interface.volume = self.volume
+            self.volume += 0.1      # Increase the volume
+
+            if not self.sound.active:
+                self.interface.volume = self.volume
 
         elif self.interface.UP_KEY and self.sound.colour == self.sound.colour_active:
             pygame.mixer.Sound.play(self.menu_sound)
@@ -203,12 +210,10 @@ class Options(Menu):
         elif self.interface.ENTER_KEY and self.sound.colour == self.sound.colour_active:
             if self.sound.active:   # To enable or disable the sound
                 self.sound.active = False
+                self.interface.volume = self.volume
             else:
                 self.sound.active = True
-
-
-
-
+                self.interface.volume = 0
 
 class GameMode(Menu):
     def __init__(self, interface):
