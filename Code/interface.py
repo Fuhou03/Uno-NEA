@@ -17,6 +17,7 @@ class Interface:
         self.running = True
 
         self.mouse_pos = None
+        self.volume = 0.5
 
         self.sign_in = SignIn(self)     # Self is a parameter so the menu can change the variables in this interface
         self.register = Register(self)
