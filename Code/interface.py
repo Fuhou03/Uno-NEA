@@ -1,6 +1,7 @@
 import pygame
 from login import *
 from menu import *
+from game_screen import GameScreen
 
 
 class Interface:
