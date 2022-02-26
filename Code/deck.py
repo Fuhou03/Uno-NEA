@@ -1,5 +1,4 @@
 import random
-import pygame
 
 class Card:
     def __init__(self, colour, value, **kwargs):
@@ -7,19 +6,50 @@ class Card:
         self.value = value
         self.image = kwargs.get("image")
 
-
-
-
-
-
-
-
 class Deck:
     def __init__(self):
         self.colours = ["red", "blue", "green", "yellow"]
         self.deck = []
-        #pygame.init()
+        self.images = Images()
 
+    def create_deck(self):
+        colour_index = 0    # Used to get the image from the correct list inside the 2D card_list
+
+        for i in range(0, 2):   # Each number has 2 cards for each colour (e.g Two blue-8s in a deck)
+            for num in range(0,13):     # Creates the cards for every colour
+                for colour in self.colours:
+                    # 2 special cards of each type for every colour e.g 2 red skips, 2 red reverse, 2 red draw_2
+                    if num == 10:
+                        self.deck.append(Card(colour, "draw 2", image=self.images.card_list[colour_index][num]))
+                    elif num == 11:
+                        self.deck.append(Card(colour, "reverse", image=self.images.card_list[colour_index][num]))
+                    elif num == 12:
+                        self.deck.append(Card(colour, "skip", image=self.images.card_list[colour_index][num]))
+                    else:   # Creating the card objects and adding them to the deck
+                        self.deck.append(Card(colour, num, image=self.images.card_list[colour_index][num]))
+                    colour_index += 1   # Incremented so it moves onto the next colour in card_list
+                colour_index = 0    # Reset to 0 to select from the red_cards list again
+
+        for i in range(4):  # 4 wild cards and 4 wild 4 cards in a deck
+            self.deck.append(Card(None, "wild 4", image=self.images.wild_4))
+            self.deck.append(Card(None, "wild", image=self.images.wild))  # Changes colour only
+
+    def shuffle(self):  # Make my own shuffle method later
+        for i in range(5):
+            random.shuffle(self.deck)
+
+    def deal_cards(self, player_deck):
+        ''' Deal 7 cards to the player and remove the 7 cards from the main deck'''
+
+        for i in range(7):
+            player_deck.append(self.deck[0])
+            self.deck.pop(0)  # Remove from the back of the deck
+
+        return player_deck
+
+
+class Images:
+    def __init__(self):
         #self.red_0 = pygame.image.load("Uno Cards\Red 0.png").convert_alpha()  # Load image later
         self.red_0 = ("Uno Cards\Red 0.png")    # Can get rid of these variables probably
         self.red_1 = ("Uno Cards\Red 1.png")
@@ -83,6 +113,15 @@ class Deck:
 
         self.wild = ("Uno Cards\Wild.png")
         self.wild_4 = ("Uno Cards\Wild 4.png")
+        self.card_back = ("Uno Cards\Back Of Card.png")
+
+        self.red_diamond = ("Uno Cards\Red Diamond.png")
+        self.blue_diamond = ("Uno Cards\Blue Diamond.png")
+        self.green_diamond = ("Uno Cards\Green Diamond.png")
+        self.yellow_diamond = ("Uno Cards\Yellow Diamond.png")
+
+        self.clockwise = ("Uno Cards\Clockwise.png")
+        self.anticlockwise = ("Uno Cards\Anticlockwise.png")
 
         self.card_list = []
         self.red_cards = []
@@ -93,6 +132,7 @@ class Deck:
         self.create_card_list()
 
     def create_card_list(self):
+        """ Add the images into separate lists then combine them to create a 2D List """
         self.red_cards.append(self.red_0)
         self.red_cards.append(self.red_1)
         self.red_cards.append(self.red_2)
@@ -156,45 +196,3 @@ class Deck:
 
         self.card_list.append(self.wild)
         self.card_list.append(self.wild_4)
-
-    def create_deck(self):
-        colour_index = 0    # Used to get the image from the correct list inside the 2D card_list
-
-        for i in range(0, 2):   # Each number has 2 cards for each colour (e.g Two blue-8s in a deck)
-            for num in range(0,13):     # Creates the cards for every colour
-                for colour in self.colours:
-                    # 2 special cards of each type for every colour e.g 2 red skips, 2 red reverse, 2 red draw_2
-                    if num == 10:
-                        self.deck.append(Card(colour, "draw 2", image=self.card_list[colour_index][num]))
-                    elif num == 11:
-                        self.deck.append(Card(colour, "reverse", image=self.card_list[colour_index][num]))
-                    elif num == 12:
-                        self.deck.append(Card(colour, "skip", image=self.card_list[colour_index][num]))
-                    else:   # Creating the card objects and adding them to the deck
-                        self.deck.append(Card(colour, num, image=self.card_list[colour_index][num]))
-                    colour_index += 1   # Incremented so it moves onto the next list in card_list
-                colour_index = 0    # Reset to 0 to select from the red_cards list again
-
-        for i in range(4):  # 4 wild cards and 4 wild 4 cards in a deck
-            self.deck.append(Card(None, "wild 4", image=self.wild_4))
-            self.deck.append(Card(None, "wild", image=self.wild))  # Changes colour only
-
-    def shuffle(self):  # Make my own shuffle method later
-        for i in range(5):
-            random.shuffle(self.deck)
-
-    def deal_cards(self, player_deck):
-        ''' Deal 7 cards to the player and remove the 7 cards from the main deck'''
-
-        for i in range(7):
-            player_deck.append(self.deck[0])
-            self.deck.pop(0)  # Remove from the back of the deck
-
-        return player_deck
-
-    def draw_card(self, player_deck):
-        """ When player chooses to draw a card """
-        player_deck.append(self.deck[0])
-        self.deck.pop(0)
-
-        return player_deck
