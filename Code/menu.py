@@ -17,6 +17,7 @@ class Menu:
         self.arrow_desc = self.text_font.render("Arrows To Navigate", True, (255, 255, 255))
 
         self.menu_sound = pygame.mixer.Sound("Sounds\menu sound.wav")
+        self.menu_sound.set_volume(self.interface.volume)
 
     def reset_keys(self):       # Every menu can use this method
         self.interface.ENTER_KEY = False
@@ -51,13 +52,12 @@ class MainMenu(Menu):
 
         self.button_list = [self.play_button, self.option_button, self.cursor]
 
-
-
     def display(self):
         """ Displays the text and buttons and checks if they pressed a key """
         self.run_display = True
         while self.run_display:
             self.interface.screen.fill((0,0,0))
+            self.menu_sound.set_volume(self.interface.volume)
 
             self.interface.screen.blit(self.title, (self.MID_W - self.title.get_width() / 2,    # This centres the text
                                        self.MID_H - 320))
@@ -95,6 +95,8 @@ class MainMenu(Menu):
         self.move_cursor()
 
         if self.interface.ENTER_KEY:    # If they pressed enter
+            pygame.mixer.Sound.play(self.menu_sound)
+
             for button in self.button_list:     # Finds the button selected
                 if button.rect.y == self.cursor.rect.y:     # If the cursor rect overlaps with that button
                     if button == self.play_button:
@@ -113,45 +115,99 @@ class Options(Menu):
         self.volume_label = self.button_font.render("Volume", True, (255, 255, 255))
         self.volume_button = Button(self.MID_W - 400, self.MID_H - 135, 240, 70)
 
-        self.music_label = self.button_font.render("Music", True, (255, 255, 255))
-        self.music_button = Button(self.MID_W - 400, self.MID_H - 35, 240, 70)
+        self.volume_slider = Button(self.MID_W - 130, self.MID_H - 100, 500, 7)
+        self.volume_slider.active = True
+        self.volume_slider.colour = self.volume_slider.colour_active
+
+        self.volume = 0.5
+        self.volume_circle_x = 120
 
         self.sound_label = self.button_font.render("Sound", True, (255, 255, 255))
-        self.sound_button = Button(self.MID_W - 400, self.MID_H + 65, 240, 70)
+        self.sound_button = Button(self.MID_W - 400, self.MID_H, 240, 70)
 
-        self.button_list = [self.volume_button, self.music_button, self.sound_button]
-
+        self.sound = Button(self.volume_slider.rect.centerx - 50, self.MID_H, 100, 70)
 
     def display(self):
         self.run_display = True
         while self.run_display:
-            self.interface.screen.fill((0,0,0))
+            self.interface.screen.fill((0, 0, 0))
+            self.menu_sound.set_volume(self.interface.volume)
+            self.interface.check_events()
+            self.check_input()
+
             self.interface.screen.blit(self.volume_label,
                                        (self.volume_button.rect.centerx - self.volume_label.get_width() / 2,
                                         self.volume_button.rect.centery - self.volume_label.get_height() / 2))
-            self.interface.screen.blit(self.music_label,
-                                       (self.music_button.rect.centerx - self.music_label.get_width() / 2,
-                                        self.music_button.rect.centery - self.music_label.get_height() / 2))
+
             self.interface.screen.blit(self.sound_label,
                                        (self.sound_button.rect.centerx - self.sound_label.get_width() / 2,
                                         self.sound_button.rect.centery - self.sound_label.get_height() / 2))
 
-            for b in self.button_list:
-                b.draw_rect(self.interface.screen)
+            self.volume_button.draw_rect(self.interface.screen)
+            self.sound_button.draw_rect(self.interface.screen)
+
+            self.volume_slider.draw_rect(self.interface.screen)
+            self.sound.draw_rect(self.interface.screen)
+
+            pygame.draw.circle(self.interface.screen, (255, 255, 255), (self.MID_W + self.volume_circle_x,
+                                                                        self.volume_slider.rect.centery), 20)
+
+            if self.sound.active:
+                pygame.draw.line(self.interface.screen, (255, 255, 255),
+                                 (self.sound.rect.topleft), (self.sound.rect.bottomright), 3)
+                pygame.draw.line(self.interface.screen, (255, 255, 255),
+                                 (self.sound.rect.topright), (self.sound.rect.bottomleft), 3)
 
             self.blit_description()
 
-            self.interface.check_events()
-            self.check_input()
-
-            pygame.display.update()
             self.interface.clock.tick(60)   # 60 fps
+            pygame.display.update()
             self.reset_keys()
+
 
     def check_input(self):   # Create sliders or options later
         if self.interface.BACK_KEY:
+            pygame.mixer.Sound.play(self.menu_sound)
             self.interface.current_screen = self.interface.main_menu
             self.run_display = False
+
+        elif self.interface.LEFT_KEY and self.volume_slider.active and (self.MID_W + self.volume_circle_x !=
+                                                                        self.MID_W - 130):
+            pygame.mixer.Sound.play(self.menu_sound)
+            self.volume_circle_x -= 50
+            self.volume -= 0.1
+            self.interface.volume = self.volume
+
+
+        elif self.interface.RIGHT_KEY and self.volume_slider.active and (self.MID_W + self.volume_circle_x !=
+                                                                         self.MID_W + 370):
+            pygame.mixer.Sound.play(self.menu_sound)
+            self.volume_circle_x += 50
+            self.volume += 0.1
+            self.interface.volume = self.volume
+
+        elif self.interface.UP_KEY and self.sound.colour == self.sound.colour_active:
+            pygame.mixer.Sound.play(self.menu_sound)
+            self.volume_slider.active = True
+            self.volume_slider.colour = self.volume_slider.colour_active
+
+            self.sound.colour = self.sound.colour_passive
+
+        elif self.interface.DOWN_KEY and self.volume_slider.active:
+            pygame.mixer.Sound.play(self.menu_sound)
+            self.sound.colour = self.sound.colour_active
+
+            self.volume_slider.active = False
+            self.volume_slider.colour = self.volume_slider.colour_passive
+
+        elif self.interface.ENTER_KEY and self.sound.colour == self.sound.colour_active:
+            if self.sound.active:   # To enable or disable the sound
+                self.sound.active = False
+            else:
+                self.sound.active = True
+
+
+
 
 
 class GameMode(Menu):
@@ -181,6 +237,9 @@ class GameMode(Menu):
         self.run_display = True
         while self.run_display:
             self.interface.screen.fill((0,0,0))
+            self.menu_sound.set_volume(self.interface.volume)
+            self.start_sound.set_volume(self.interface.volume)
+
             self.interface.screen.blit(self.two_player_label, (self.MID_W - self.two_player_label.get_width() / 2,
                                                                self.MID_H - 100))
             self.interface.screen.blit(self.three_player_label, (self.MID_W - self.three_player_label.get_width() / 2,
@@ -202,7 +261,7 @@ class GameMode(Menu):
 
     def move_cursor(self):
         if self.interface.DOWN_KEY:
-            if self.cursor.rect.y != self.four_player_button.rect.y:     # Stops the cursor from moving away from buttons
+            if self.cursor.rect.y != self.four_player_button.rect.y:    # Stops the cursor from moving away from buttons
                 self.cursor.rect.y += 120
                 pygame.mixer.Sound.play(self.menu_sound)
 
@@ -210,7 +269,6 @@ class GameMode(Menu):
             if self.cursor.rect.y != self.two_player_button.rect.y:
                 self.cursor.rect.y -= 120
                 pygame.mixer.Sound.play(self.menu_sound)
-
 
     def check_input(self):
         self.move_cursor()
