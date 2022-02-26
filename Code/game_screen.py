@@ -44,10 +44,8 @@ class GameScreen(Menu):
         self.place_card_sound = pygame.mixer.Sound("Sounds\place card.wav")
         self.invalid_card_sound = pygame.mixer.Sound("Sounds\invalid card.wav")
         self.button_sound = pygame.mixer.Sound("Sounds\pressed button.wav")
-
-        #self.skip_sound = pygame.mixer.Sound("Sounds\skip sound.wav")
-        #self.wild_4_sound = pygame.mixer.Sound("Sounds\wild 4 sound.mp3")
         self.finished_sound = pygame.mixer.Sound("Sounds\game_over.wav")
+        self.sound_list = [self.place_card_sound, self.invalid_card_sound, self.button_sound, self.finished_sound]
 
         self.deck = None        # Assigned later
         self.action = None
@@ -221,6 +219,7 @@ class GameScreen(Menu):
         self.game = game
 
         self.interface.screen.fill(pygame.Color("darkorange"))
+        self.set_volume()
         #self.interface.screen.fill((0, 85, 255))    #(0, 100, 255)
 
         #chocolate1  #cyan3 #dodgerblue #lightgoldenrod
@@ -370,6 +369,10 @@ class GameScreen(Menu):
             self.uno_button.active = False
             self.draw_button.colour = self.draw_button.colour_active
             self.draw_button.active = True
+
+    def set_volume(self):
+        for sound in self.sound_list:
+            sound.set_volume(self.interface.volume)
 
     def ask(self, game):
         """ Asks the user if they want to place their drawn card down """
