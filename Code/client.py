@@ -19,7 +19,7 @@ def main():
                 interface.game_mode.waiting_screen()    # Displays the waiting screen
 
                 try:
-                    # This would pause the loop until it receives data - if it was in blocking-mode
+                    # This would pause the loop until it receives data if it was in blocking-mode
                     if net.receive():   # Receives data when the game has begun so it can stop the loop
                         net.client.setblocking(True)    # Reset it so it waits to receive the player number
 
@@ -36,53 +36,56 @@ def main():
     while running:
         try:
             state = net.receive()
-            print("Received Data")
 
         except Exception as e:
             print(e)
             print("\nRan into an issue when receiving the data.")
             running = False
 
+        if state.game.finished:
+            running = False
+            interface.game_screen.finished_screen(state.game)
+
         if state.game.turn == player_number:    # If it's your turn you perform an action
             if state.payload == "Choose":
                 while not interface.card_chosen:   # Client hasn't chosen card yet
                     interface.game_screen.display(player_number, state.game) # To display the game screen
+
                 interface.card_chosen = False   # Reset it so they can choose another card next turn
 
             elif state.payload == "Confirm":
                 interface.game_screen.confirm = True
                 while interface.game_screen.confirm:
-                    interface.game_screen.ask()     # Asks the user if they want to place the drawn card down
+                    interface.game_screen.ask(state.game)     # Asks the user if they want to place the drawn card down
 
             if state.payload == "Choose" or state.payload == "Confirm":
-                # None when they don't place down the card they picked up. "Executed" if the card was placed down.
+                # == 'None' when they don't place down the card they picked up, 'Executed"' if the card was placed down
                 action = interface.game_screen.action
-                net.send(action)
+                net.send(action)    # Send the action to the server so it can be executed
+
                 interface.game_screen.action = None     # Reset the action
-                alert = net.receive()   # Tells the client that the action was executed
-                # alert is needed so all clients can return to the try statement and receive the game at the same time
+                alert = net.receive()   # To tell the client that the action was executed
+                # alert is needed so all clients can return to the try statement at the same time and receive the game
 
         else:   # If it's not your turn
-            net.client.setblocking(False)   # Stops the client socket from pausing the loop until it receives data
-            if state.payload == "Choose":   # Displays the game but doesn't allow them to pick a card
+            net.client.setblocking(False)   # Stops the client socket from breaking the loop if it receives no data
+            if state.payload == "Choose":   # Displays the game screen, but they won't be able to pick a card
                 while True:
-                    
                     interface.game_screen.display(player_number, state.game)
 
                     try:
-                        msg = net.receive()   # When a player has made a move you receive data
-                        
-                        if msg == "Executed" or "None":
+                        msg = net.receive()
+                        # When a player has made a move you receive a message which breaks the loop
+                        if msg == "Executed" or "None":    # If a player is confirming their action you will wait
                             break   # To return to the main loop
-                       
                     except:
-                        pass    # Stops the loop from pausing
+                        pass    # Stops the loop from breaking when no data is received
 
-            else:   # If an action was just executed it moves on and waits to receive the game
-                print("Moved On")
+            else:   # If an action was just executed it moves on and waits to receive the game again
+                pass
 
-            net.client.setblocking(True)    # Resetting it so it waits to receive the data at the try statement
-
+            net.client.setblocking(True)
+            # Resetting it to True, so the program waits at the top try statement until the client receives the game
 
 if __name__ == "__main__":
     main()
