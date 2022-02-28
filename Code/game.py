@@ -63,19 +63,14 @@ class Uno:
             for i in range(2):  # next_turn is called so you get the index of the next player
                 self.draw_card(self.player_list[self.next_turn()].deck)
 
-            #print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
-
             for i in range(2): # Turn increments twice so it skips the next player
                 self.turn = self.next_turn()
 
         elif self.discard_pile[-1].value == "skip":
-            #print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
-
             for i in range(2):
                 self.turn = self.next_turn()
 
         elif self.discard_pile[-1].value == "reverse":
-            #print(f"\nPlayer {self.player_list[self.next_turn()].id}'s turn is skipped.") # Printed before the reverse
             self.change_direction()
             self.turn = self.next_turn()
 
@@ -84,10 +79,8 @@ class Uno:
 
         elif self.discard_pile[-1].value == "wild 4":
             for i in range(4):  # Next player draws 4 cards
-
                 self.draw_card(self.player_list[self.next_turn()].deck)
-            #print(f"Player {self.player_list[self.next_turn()].id}'s turn is skipped.")
-
+            
             for i in range(2):
                 self.turn = self.next_turn()
 
