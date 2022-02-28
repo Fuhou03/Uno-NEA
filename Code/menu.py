@@ -1,5 +1,6 @@
 import pygame
 from button import Button
+import webbrowser
 
 
 class Menu:
@@ -40,17 +41,19 @@ class MainMenu(Menu):
         self.title_font = pygame.font.Font(None, 170)
         self.play_label = self.menu_font.render("Play", True, (255, 255, 255))
         self.option_label = self.menu_font.render("Options", True, (255, 255, 255))
+        self.rules_label = self.menu_font.render("Rules", True, (255, 255, 255))
 
         self.title = self.title_font.render("Uno", True, (255, 255, 255))
 
         # x, y for top left corner of the rectangle and then width, height
-        self.play_button = Button(self.MID_W - 160, self.MID_H - 80, 320, 100)
-        self.option_button = Button(self.MID_W - 160, self.MID_H + 80, 320, 100)
+        self.play_button = Button(self.MID_W - 160, self.MID_H - 130, 320, 100)
+        self.option_button = Button(self.MID_W - 160, self.MID_H + 30, 320, 100)
+        self.rules_button = Button(self.MID_W - 160, self.MID_H + 190, 320, 100)
 
-        self.cursor = Button(self.MID_W - 160, self.MID_H - 80, 320, 100)
+        self.cursor = Button(self.MID_W - 160, self.MID_H - 130, 320, 100)
         self.cursor.colour = self.cursor.colour_active
 
-        self.button_list = [self.play_button, self.option_button, self.cursor]
+        self.button_list = [self.play_button, self.option_button, self.rules_button, self.cursor]
 
     def display(self):
         """ Displays the text and buttons and checks if they pressed a key """
@@ -62,9 +65,11 @@ class MainMenu(Menu):
             self.interface.screen.blit(self.title, (self.MID_W - self.title.get_width() / 2,    # This centres the text
                                        self.MID_H - 320))
             self.interface.screen.blit(self.play_label, (self.MID_W - self.play_label.get_width() / 2,
-                                        self.MID_H - 60))
+                                        self.MID_H - 110))
             self.interface.screen.blit(self.option_label, (self.MID_W - self.option_label.get_width() / 2,
-                                       self.MID_H + 100))
+                                       self.MID_H + 50))
+            self.interface.screen.blit(self.rules_label, (self.MID_W - self.rules_label.get_width() / 2,
+                                                           self.MID_H + 210))
 
             self.blit_description()
 
@@ -81,7 +86,7 @@ class MainMenu(Menu):
     def move_cursor(self):
         """ Moves the cursor up and down if you pressed the corresponding key """
         if self.interface.DOWN_KEY:     # If they pressed the Down arrow key
-            if self.cursor.rect.y != self.option_button.rect.y:     # Stops the cursor from moving above/below button
+            if self.cursor.rect.y != self.rules_button.rect.y:     # Stops the cursor from moving above/below button
                 self.cursor.rect.y += 160   # Moves the cursor up and down
                 pygame.mixer.Sound.play(self.menu_sound)
 
@@ -106,6 +111,10 @@ class MainMenu(Menu):
                     elif button == self.option_button:
                         self.interface.current_screen = self.interface.options
                         self.run_display = False
+
+                    elif button == self.rules_button:
+                        webbrowser.open(r"https://www.ultraboardgames.com/uno/game-rules.php")
+
 
 
 class Options(Menu):
@@ -167,7 +176,6 @@ class Options(Menu):
             self.interface.clock.tick(60)   # 60 fps
             pygame.display.update()
             self.reset_keys()
-
 
     def check_input(self):   # Create sliders or options later
         if self.interface.BACK_KEY:
