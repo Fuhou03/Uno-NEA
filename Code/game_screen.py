@@ -94,11 +94,12 @@ class GameScreen(Menu):
         anticlockwise_img = pygame.transform.scale(anticlockwise, (anticlockwise.get_width() * 0.40,
                                                                    anticlockwise.get_height() * 0.40))
 
+        # This puts the image in the centre of the screen
         CW_X, ACW_X = self.MID_W - clockwise_img.get_width() / 2, self.MID_W - anticlockwise_img.get_width() / 2
         CW_Y, ACW_Y = self.MID_H - clockwise_img.get_height() / 2, self.MID_H - anticlockwise_img.get_height() / 2
 
         if self.TOP_ID is not None:     # 2 or 4 player mode
-            CW_X += 200
+            CW_X += 200     # The position is changed depending on the game mode
             ACW_X += 200
         else:   # The direction arrow image is in a different position for 3 player mode
             CW_Y -= 220
@@ -174,7 +175,7 @@ class GameScreen(Menu):
         """ Displaying the opponent's cards faced down """
 
         if self.game.game_mode != 2:    # Only game mode 3 and 4 has players on the left and right side
-            for i in range(0, len(self.left_opponent.deck)):
+            for i in range(0, len(self.left_opponent.deck)):    # Blit left opponent's cards
                 self.interface.screen.blit(self.back_image,
                                            (self.MID_W + self.opponent_x_offset, self.MID_H + self.opponent_y_offset))
                 self.opponent_y_offset += 50    # So the cards move downwards
@@ -182,7 +183,7 @@ class GameScreen(Menu):
             self.reset_offsets()    # Reset it for the other opponent
             self.opponent_x_offset = 480 - self.back_image.get_width()    # To blit the cards of the opponent on the right
 
-            for j in range(0, len(self.right_opponent.deck)):
+            for j in range(0, len(self.right_opponent.deck)):   # # Blit right opponent's cards
                 self.interface.screen.blit(self.back_image, (self.MID_W + self.opponent_x_offset,
                                                              self.MID_H + self.opponent_y_offset))
                 self.opponent_y_offset += 50    # So the cards move downwards
@@ -246,13 +247,13 @@ class GameScreen(Menu):
 
         # Allows them to select a card if it's their turn
         if self.game.turn == self.player_id:
-            # Draw the cursor rectangle; 2 blits the border only
-            if not self.cursor_rect or self.number_of_cards_changed:    # Create the rectangle
+            if not self.cursor_rect or self.number_of_cards_changed:    # Create the cursor rect.
                 self.cursor_rect = self.image_list[0].image.get_rect(topleft=(self.MID_W - (self.total_image_width / 2),
                                                                               self.MID_H + 270))
+                # Creates a rectangle around the first card so you can move this cursor left and right to select a card
                 self.number_of_cards_changed = False
 
-            pygame.draw.rect(self.interface.screen, pygame.Color("black"), self.cursor_rect, 2)
+            pygame.draw.rect(self.interface.screen, pygame.Color("black"), self.cursor_rect, 2) # Draw cursor rect
             self.check_input()      # Checks for key presses and lets them move the cursor and select a card
 
             if self.invalid:    # If the card they chose cannot be placed down
@@ -275,12 +276,12 @@ class GameScreen(Menu):
         if self.interface.ENTER_KEY and not self.draw_button.active and not self.uno_button.active:  # They chose a card
             for image in self.image_list:
                 if self.cursor_rect.x == image.x:   # If the cursor overlaps with the image's rectangle
-                    card_index = self.image_list.index(image)   # The pos of the chosen card in the image list and deck
+                    card_index = self.image_list.index(image)  # The pos of the chosen card in the image list (and deck)
                     self.choose_card(card_index)    # Uses the index to check if that card in the deck is valid
 
                     if self.interface.card_chosen:  # They chose a valid card
                         self.invalid = False
-                        self.deck.pop(card_index)   # So the card doesn't get displayed among your deck
+                        self.deck.pop(card_index)   # So the card doesn't get displayed among your deck again
                         pygame.mixer.Sound.play(self.place_card_sound)
                     else:   # The card they picked was invalid
                         pygame.mixer.Sound.play(self.invalid_card_sound)
@@ -331,8 +332,8 @@ class GameScreen(Menu):
             self.invalid = True     # They will be asked to choose another card
 
         if self.pressed_uno:
-            self.action.pressed_uno = True
-            self.pressed_uno = False
+            self.action.pressed_uno = True  # To tell the server that they pressed uno
+            self.pressed_uno = False    # Reset the variable so another user can press the uno button
 
     def move_cursor(self):
         """ Move the cursor rectangle left or right to select a card, or up and down to press the other buttons """
@@ -375,7 +376,7 @@ class GameScreen(Menu):
             sound.set_volume(self.interface.volume)
 
     def ask(self, game):
-        """ Asks the user if they want to place their drawn card down """
+        """ If the card they drew is valid the user is asked if they want to place it down """
         self.interface.screen.fill((0, 100, 255))
         self.interface.check_events()
 
@@ -386,15 +387,13 @@ class GameScreen(Menu):
         picked_up_card = self.scale_image(your_player.deck[-1])   # The card you just picked up is at index -1
         self.interface.screen.blit(picked_up_card, (self.MID_W - picked_up_card.get_width() / 2, self.MID_H - 200))
 
-        self.interface.screen.blit(self.yes_text, (self.MID_W + 215,    # Drawing the text and buttons onto screen
-                                                   self.MID_H + 125))
-        self.interface.screen.blit(self.no_text, (self.MID_W - 275,
-                                                  self.MID_H + 125))
-        self.yes_button.draw_rect(self.interface.screen)
+        self.interface.screen.blit(self.yes_text, (self.MID_W + 215, self.MID_H + 125))     # Drawing the text
+        self.interface.screen.blit(self.no_text, (self.MID_W - 275,  self.MID_H + 125))
+        self.yes_button.draw_rect(self.interface.screen)    # Putting buttons onto screen
         self.no_button.draw_rect(self.interface.screen)
 
         if self.interface.LEFT_KEY:     # Moves the cursor rect so you can select an option
-            if self.ask_cursor.rect.x != self.no_button.rect.x:  # If it's not already on the no button
+            if self.ask_cursor.rect.x != self.no_button.rect.x:  # If it's not already on the 'no' button
                 self.ask_cursor.rect.x -= 500
         elif self.interface.RIGHT_KEY:
             if self.ask_cursor.rect.x != self.yes_button.rect.x:
@@ -402,7 +401,7 @@ class GameScreen(Menu):
 
         elif self.interface.ENTER_KEY:
             if self.ask_cursor.rect.x == self.yes_button.rect.x:
-                self.action = Decision("Yes")
+                self.action = Decision("Yes")   # This will be sent to the server to inform it of your decision
             else:
                 self.action = Decision("No")
 
@@ -418,7 +417,7 @@ class GameScreen(Menu):
         self.interface.check_events()
         font = pygame.font.Font(None, 80)
 
-        choose_text = font.render("Choose A Colour", True, (255, 255, 255))
+        choose_text = font.render("Choose A Colour", True, (0, 0, 0))
         self.interface.screen.blit(choose_text, (self.MID_W - choose_text.get_width() / 2, self.MID_H - 300))
 
         # Create an image object for each diamond and assign their images and co-ordinates to attributes
@@ -497,8 +496,8 @@ class GameScreen(Menu):
             self.interface.screen.fill((0, 85, 255))
             self.interface.check_events()
 
-            finished_text = self.button_font.render("The game has finished!", True, (255, 255, 255))
-            winner_text = self.button_font.render("The winner is P" + str(game.winner), True, (255, 255, 255))
+            finished_text = self.button_font.render("The game has finished!", True, (0, 0, 0))
+            winner_text = self.button_font.render("The winner is P" + str(game.winner), True, (0, 0, 0))
 
             self.interface.screen.blit(finished_text, (self.MID_W - finished_text.get_width() / 2, self.MID_H - 300))
             self.interface.screen.blit(winner_text, (self.MID_W - winner_text.get_width() / 2, self.MID_H - 200))
