@@ -7,7 +7,6 @@ import time
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ip = socket.gethostbyname(socket.gethostname())  # my IPv4 Address
-#ip = ""     # Binds to the server
 
 port = 5555
 
